@@ -1,0 +1,77 @@
+commit 6d134ca4b963706f31251f061fc180e517b32546
+Author: Martin Sebor <msebor@redhat.com>
+Date:   Tue Feb 23 14:09:00 2021 -0700
+
+    PR c++/99074 - crash in dynamic_cast<>() on null pointer
+    
+    libstdc++-v3/ChangeLog:
+    
+            PR c++/99074
+            * libsupc++/dyncast.cc (__dynamic_cast): Return null when
+            first argument is null.
+    
+    gcc/testsuite/ChangeLog:
+    
+            PR c++/99074
+            * g++.dg/warn/Wnonnull11.C: New test.
+
+diff --git a/gcc/testsuite/g++.dg/warn/Wnonnull11.C b/gcc/testsuite/g++.dg/warn/Wnonnull11.C
+new file mode 100644
+index 00000000000..5f1b69d9a41
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/warn/Wnonnull11.C
+@@ -0,0 +1,40 @@
++/* PR c++/99074 - gcc 8 and above is crashing with dynamic_cast<>() on null
++   pointer with optimization level -O1 and above
++   { dg-do run }
++   { dg-options "-O1 -Wall" } */
++
++class Base
++{
++public:
++  virtual ~Base() {}
++  virtual void op() = 0;
++};
++
++class Object: public virtual Base { };
++
++class AbstractBase: public virtual Base
++{
++public:
++  Object* _to_object ()
++  {
++    return dynamic_cast<Object*>(this);   // { dg-warning "\\\[-Wnonnull" "" { xfail *-*-* } }
++  }
++};
++
++class MyAbstractClass: public virtual AbstractBase
++{
++public:
++  static MyAbstractClass* _nil () { return 0; }
++};
++
++
++int main ()
++{
++  MyAbstractClass *my_abs_type = MyAbstractClass::_nil ();
++  AbstractBase *abs_base = my_abs_type;
++  Object *obj = abs_base->_to_object ();
++
++  __builtin_printf ("object is: %p\n", obj);
++
++  return 0;
++}
+diff --git a/libstdc++-v3/libsupc++/dyncast.cc b/libstdc++-v3/libsupc++/dyncast.cc
+index b7d98495ad3..f8f707ee4d4 100644
+--- a/libstdc++-v3/libsupc++/dyncast.cc
++++ b/libstdc++-v3/libsupc++/dyncast.cc
+@@ -47,6 +47,9 @@ __dynamic_cast (const void *src_ptr,    // object started from
+                 const __class_type_info *dst_type, // desired target type
+                 ptrdiff_t src2dst) // how src and dst are related
+   {
++  if (!src_ptr)
++    /* Handle precondition violations gracefully.  */
++    return NULL;
+   const void *vtable = *static_cast <const void *const *> (src_ptr);
+   const vtable_prefix *prefix =
+       adjust_pointer <vtable_prefix> (vtable, 

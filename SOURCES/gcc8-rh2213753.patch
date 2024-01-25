@@ -1,0 +1,75 @@
+From 6f989c5c6e5f909996a117bb24ecac936e7526c1 Mon Sep 17 00:00:00 2001
+From: Marek Polacek <polacek@redhat.com>
+Date: Wed, 14 Jun 2023 17:09:15 -0400
+Subject: [PATCH] final: fix for TLSLD references [BZ#2213753]
+
+Patch by Jakub Jelinek.
+---
+ gcc/final.c                          | 17 +++++++++++++++++
+ gcc/testsuite/g++.dg/tls/bz2213753.C | 26 ++++++++++++++++++++++++++
+ 2 files changed, 43 insertions(+)
+ create mode 100644 gcc/testsuite/g++.dg/tls/bz2213753.C
+
+diff --git a/gcc/final.c b/gcc/final.c
+index 5a65a8ce07c..c783fbb83d7 100644
+--- a/gcc/final.c
++++ b/gcc/final.c
+@@ -1691,6 +1691,23 @@ get_some_local_dynamic_name ()
+ 	    }
+ 	}
+ 
++  /* If all the TLSLD references from current function were DCEd, try harder and pick
++     name of any TLSLD symbol in current TU.  */
++  varpool_node *node;
++  if (!this_is_asm_operands)
++    FOR_EACH_VARIABLE (node)
++      if (DECL_THREAD_LOCAL_P (node->decl)
++	  && TREE_STATIC (node->decl)
++	  && decl_tls_model (node->decl) == TLS_MODEL_LOCAL_DYNAMIC
++	  && DECL_RTL_SET_P (node->decl))
++	{
++	  rtx rtl = DECL_RTL (node->decl);
++	  if (MEM_P (rtl)
++	      && GET_CODE (XEXP (rtl, 0)) == SYMBOL_REF
++	      && SYMBOL_REF_TLS_MODEL (XEXP (rtl, 0)) == TLS_MODEL_LOCAL_DYNAMIC)
++	    return XSTR (XEXP (rtl, 0), 0);
++	}
++
+   return 0;
+ }
+ 
+diff --git a/gcc/testsuite/g++.dg/tls/bz2213753.C b/gcc/testsuite/g++.dg/tls/bz2213753.C
+new file mode 100644
+index 00000000000..0c4742d8058
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/tls/bz2213753.C
+@@ -0,0 +1,26 @@
++// RHBZ #2213753
++// { dg-do compile { target c++11 } }
++// { dg-require-effective-target fpic }
++// { dg-require-effective-target shared }
++// { dg-require-effective-target tls }
++// { dg-options "-fPIC -O2" }
++// { dg-add-options tls }
++
++struct A { ~A (); };
++static thread_local int *t;
++int a;
++A::~A () { t = &a; }
++long b;
++
++void *
++foo ()
++{
++  void *c;
++  if (t)
++    {
++      c = operator new (b);
++      return c;
++    }
++  void *d = operator new (b);
++  return d;
++}
+-- 
+2.40.1
+
