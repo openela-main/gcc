@@ -4,7 +4,7 @@
 %global gcc_major 8
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 20
+%global gcc_release 21
 %global nvptx_tools_gitrev c28050f60193b3b95a18866a96f03334e874e78f
 %global nvptx_newlib_gitrev aadc8eb0ec43b7cd0dd2dfb484bae63c8b05ef24
 %global _unpackaged_files_terminate_build 0
@@ -304,6 +304,8 @@ Patch43:              gcc8-s390x-regarg-3.patch
 Patch44:              gcc8-rh2213753.patch
 Patch45:              gcc8-pr99074.patch
 Patch46:              gcc8-pr87723.patch
+Patch47:              gcc8-pr111039.patch
+Patch48:              gcc8-pr111070.patch
 
 Patch1000:            nvptx-tools-no-ptxas.patch
 Patch1001:            nvptx-tools-build.patch
@@ -925,6 +927,8 @@ so that there cannot be any synchronization problems.
 %patch44 -p1 -b .rh2213753~
 %patch45 -p1 -b .pr99074~
 %patch46 -p1 -b .pr87723~
+%patch47 -p1 -b .pr111039~
+%patch48 -p1 -b .pr111070~
 
 cd nvptx-tools-%{nvptx_tools_gitrev}
 %patch1000 -p1 -b .nvptx-tools-no-ptxas~
@@ -3332,6 +3336,9 @@ fi
 %{ANNOBIN_GCC_PLUGIN_DIR}/gcc-annobin.so.0.0.0
 
 %changelog
+* Wed Oct  4 2023 Marek Polacek <polacek@redhat.com> 8.5.0-21
+- guard the bit test merging code in if-combine (RHEL-11483)
+
 * Wed Jun 14 2023 Marek Polacek <polacek@redhat.com> 8.5.0-20
 - fix for TLSLD references (#2213753)
 - fix crash in dynamic_cast<>() on null pointer (PR c++/99074, #2211506)
