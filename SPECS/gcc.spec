@@ -4,7 +4,7 @@
 %global gcc_major 8
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 22
+%global gcc_release 23
 %global nvptx_tools_gitrev c28050f60193b3b95a18866a96f03334e874e78f
 %global nvptx_newlib_gitrev aadc8eb0ec43b7cd0dd2dfb484bae63c8b05ef24
 %global _unpackaged_files_terminate_build 0
@@ -3338,6 +3338,9 @@ fi
 %{ANNOBIN_GCC_PLUGIN_DIR}/gcc-annobin.so.0.0.0
 
 %changelog
+* Fri Feb  7 2025 Marek Polacek <polacek@redhat.com> 8.5.0-23
+- rebuild for CVE-2020-11023 (RHEL-78274)
+
 * Thu Apr 18 2024 Marek Polacek <polacek@redhat.com> 8.5.0-22
 - fix ICE in the vectorizer (RHEL-32886)
 
