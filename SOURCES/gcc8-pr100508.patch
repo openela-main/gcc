@@ -1,0 +1,74 @@
+commit ba374dfb937a8ac1c7c4740913331951a924f88b
+Author: Jakub Jelinek <jakub@redhat.com>
+Date:   Wed May 12 10:38:35 2021 +0200
+
+    expand: Don't reuse DEBUG_EXPRs with vector type if they have different modes [PR100508]
+    
+    The inliner doesn't remap DEBUG_EXPR_DECLs, so the same decls can appear
+    in multiple functions.
+    Furthermore, expansion reuses corresponding DEBUG_EXPRs too, so they again
+    can be reused in multiple functions.
+    Neither of that is a major problem, DEBUG_EXPRs are just magic value holders
+    and what value they stand for is independent in each function and driven by
+    what debug stmts or DEBUG_INSNs they are bound to.
+    Except for DEBUG_EXPR*s with vector types, TYPE_MODE can be either BLKmode
+    or some vector mode depending on whether current function's enabled ISAs
+    support that vector mode or not.  On the following testcase, we expand it
+    first in foo function without AVX2 enabled and so the DEBUG_EXPR is
+    BLKmode, but later the same DEBUG_EXPR_DECL is used in a simd clone with
+    AVX2 enabled and expansion ICEs because of a mode mismatch.
+    
+    The following patch fixes that by forcing recreation of a DEBUG_EXPR if
+    there is a mode mismatch for vector typed DEBUG_EXPR_DECL, DEBUG_EXPRs
+    will be still reused in between functions otherwise and within the same
+    function the mode should be always the same.
+    
+    2021-05-12  Jakub Jelinek  <jakub@redhat.com>
+    
+            PR middle-end/100508
+            * cfgexpand.c (expand_debug_expr): For DEBUG_EXPR_DECL with vector
+            type, don't reuse DECL_RTL if it has different mode, instead force
+            creation of a new DEBUG_EXPR.
+    
+            * gcc.dg/gomp/pr100508.c: New test.
+    
+    (cherry picked from commit 19040050aa2c8ee890fc58dda48639fc91bf0af0)
+
+diff --git a/gcc/cfgexpand.c b/gcc/cfgexpand.c
+index b1535e15d28..a7d05202184 100644
+--- a/gcc/cfgexpand.c
++++ b/gcc/cfgexpand.c
+@@ -4358,7 +4358,12 @@ expand_debug_expr (tree exp)
+       op0 = DECL_RTL_IF_SET (exp);
+ 
+       if (op0)
+-	return op0;
++	{
++	  if (GET_MODE (op0) != mode)
++	    gcc_assert (VECTOR_TYPE_P (TREE_TYPE (exp)));
++	  else
++	    return op0;
++	}
+ 
+       op0 = gen_rtx_DEBUG_EXPR (mode);
+       DEBUG_EXPR_TREE_DECL (op0) = exp;
+diff --git a/gcc/testsuite/gcc.dg/gomp/pr100508.c b/gcc/testsuite/gcc.dg/gomp/pr100508.c
+new file mode 100644
+index 00000000000..c3fa2fc258e
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/gomp/pr100508.c
+@@ -0,0 +1,14 @@
++/* PR middle-end/100508 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -g -fopenmp-simd" } */
++
++typedef int __attribute__((__vector_size__(32))) V;
++V j;
++
++#pragma omp declare simd
++int
++foo (void)
++{
++  V m = j;
++  return 0;
++}
