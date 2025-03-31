@@ -1,0 +1,27 @@
+NullablePointer support not available, so drop these tests.
+
+diff --git a/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx11.cc b/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx11.cc.new
+index 2f75d12..6fb19c3 100644
+--- a/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx11.cc
++++ b/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx11.cc
+@@ -145,20 +145,6 @@ main()
+   std::unique_ptr<data>& rarrptr = arrptr;
+ // { dg-final { regexp-test rarrptr {std::unique_ptr.datum \[\]. = {get\(\) = 0x.*}} } }
+ 
+-  struct Deleter
+-  {
+-    int deleter_member = -1;
+-    using pointer = __gnu_test::NullablePointer<void>;
+-    void operator()(pointer) const noexcept { }
+-  };
+-  static_assert( !std::is_empty<Deleter>(), "Deleter is not empty" );
+-  static_assert( std::is_empty<Deleter::pointer>(), "but pointer is empty" );
+-
+-  std::unique_ptr<int, Deleter> empty_ptr;
+-// { dg-final { note-test empty_ptr {std::unique_ptr<int> = {get() = {<No data fields>}}} } }
+-  std::unique_ptr<int, Deleter>& rempty_ptr = empty_ptr;
+-// { dg-final { note-test rempty_ptr {std::unique_ptr<int> = {get() = {<No data fields>}}} } }
+-
+   struct Deleter_pr103086
+   {
+     int deleter_member = -1;

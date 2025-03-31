@@ -1,10 +1,11 @@
+%global source_date_epoch_from_changelog 1
 %global DATE 20210514
 %global gitrev a3253c88425835d5b339d6998a1110a66ccd8b44
 %global gcc_version 8.5.0
 %global gcc_major 8
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 24
+%global gcc_release 26
 %global nvptx_tools_gitrev c28050f60193b3b95a18866a96f03334e874e78f
 %global nvptx_newlib_gitrev aadc8eb0ec43b7cd0dd2dfb484bae63c8b05ef24
 %global _unpackaged_files_terminate_build 0
@@ -309,9 +310,16 @@ Patch48:              gcc8-pr111070.patch
 Patch49:              gcc8-RHEL-32886.patch
 Patch50:              gcc8-pr100508.patch
 
-Patch1000:            nvptx-tools-no-ptxas.patch
-Patch1001:            nvptx-tools-build.patch
-Patch1002:            nvptx-tools-glibc.patch
+# Any patches changing libstdc++-v3/python and its tests should go after this.
+Patch1000:            gcc8-libstdc++-prettyprinter-update-14.patch
+Patch1001:            gcc8-libstdc++-prettyprinter-update-14-tests.patch
+Patch1002:            gcc8-libstdc++-prettyprinter-update-14-tests-48362.patch
+Patch1003:            gcc8-libstdc++-prettyprinter-update-14-tests-cxx11.patch
+Patch1004:            gcc8-libstdc++-prettyprinter-update-14-tests-cxx17.patch
+
+Patch2000:            nvptx-tools-no-ptxas.patch
+Patch2001:            nvptx-tools-build.patch
+Patch2002:            nvptx-tools-glibc.patch
 
 
 # On ARM EABI systems, we do want -gnueabi to be part of the
@@ -934,10 +942,16 @@ so that there cannot be any synchronization problems.
 %patch49 -p0 -b .32886~
 %patch50 -p1 -b .pr100508~
 
+%patch1000 -p1 -b .libstdc++-prettyprinter-update-14~
+%patch1001 -p1 -b .libstdc++-prettyprinter-update-14-tests~
+%patch1002 -p1 -b .libstdc++-prettyprinter-update-14-tests-48362~
+%patch1003 -p1 -b .libstdc++-prettyprinter-update-14-tests-cxx11~
+%patch1004 -p1 -b .libstdc++-prettyprinter-update-14-tests-cxx17~
+
 cd nvptx-tools-%{nvptx_tools_gitrev}
-%patch1000 -p1 -b .nvptx-tools-no-ptxas~
-%patch1001 -p1 -b .nvptx-tools-build~
-%patch1002 -p1 -b .nvptx-tools-glibc~
+%patch2000 -p1 -b .nvptx-tools-no-ptxas~
+%patch2001 -p1 -b .nvptx-tools-build~
+%patch2002 -p1 -b .nvptx-tools-glibc~
 cd ..
 
 echo 'OpenELA %{version}-%{gcc_release}' > gcc/DEV-PHASE
@@ -1558,9 +1572,9 @@ mv -f %{buildroot}%{_prefix}/%{_lib}/libstdc++*gdb.py* \
       %{buildroot}%{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}/
 pushd ../libstdc++-v3/python
 for i in `find . -name \*.py`; do
-  touch -r $i %{buildroot}%{_prefix}/share/gcc-%{gcc_major}/python/$i
+  touch -d @$SOURCE_DATE_EPOCH %{buildroot}%{_prefix}/share/gcc-%{gcc_major}/python/$i
 done
-touch -r hook.in %{buildroot}%{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}/libstdc++*gdb.py
+touch -d @$SOURCE_DATE_EPOCH %{buildroot}%{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}/libstdc++*gdb.py
 popd
 for f in `find %{buildroot}%{_prefix}/share/gcc-%{gcc_major}/python/ \
 	       %{buildroot}%{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}/ -name \*.py`; do
@@ -3340,6 +3354,12 @@ fi
 %{ANNOBIN_GCC_PLUGIN_DIR}/gcc-annobin.so.0.0.0
 
 %changelog
+* Fri Mar 21 2025 Siddhesh Poyarekar <siddhesh@redhat.com> 8.5.0-26
+- Pin modification time for python files to SOURCE_DATE_EPOCH (RHEL-50290).
+
+* Fri Feb 28 2025 Siddhesh Poyarekar <siddhesh@redhat.com> 8.5.0-25
+- Sync libstdc++ pretty printers to latest GTS (RHEL-50290).
+
 * Mon Feb 24 2025 Marek Polacek <polacek@redhat.com> 8.5.0-24
 - don't reuse DEBUG_EXPRs with vector type (PR middle-end/100508, RHEL-79501)
 

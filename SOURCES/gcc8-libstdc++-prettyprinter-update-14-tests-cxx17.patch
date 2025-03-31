@@ -1,0 +1,44 @@
+Revert this commit for libstdc++-prettyprinters (only cxx17, 91997
+doesn't exist in this tree) since gcc8 does not default to c++17.  The
+context has been adapted but the change should be exact:
+
+commit 0498d2d09a2364aae1e6b5e085c8ebb8fc517684
+Author: Jonathan Wakely <jwakely@redhat.com>
+Date:   Mon May 10 16:22:54 2021 +0100
+
+    libstdc++: Remove redundant -std=gnu++17 option from remaining tests
+
+Also remove the filesystem tests since it's not supported by RHEL8 gcc.
+
+diff --git b/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx17.cc a/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx17.cc
+index 72c66d3b785..98e21e963fe 100644
+--- b/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx17.cc
++++ a/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx17.cc
+@@ -1,4 +1,4 @@
+-// { dg-options "-g -O0" }
++// { dg-options "-g -O0 -std=gnu++17" }
+ // { dg-do run { target c++17 } }
+ 
+ // Copyright (C) 2014-2024 Free Software Foundation, Inc.
+@@ -18,7 +18,6 @@
+ // with this library; see the file COPYING3.  If not see
+ // <http://www.gnu.org/licenses/>.
+ 
+-#include <filesystem>
+ #include <any>
+ #include <optional>
+ #include <variant>
+@@ -120,13 +119,6 @@ main()
+ // { dg-final { regexp-test q {std::shared_ptr.int \[2\]. \(use count 2, weak count 1\) = {get\(\) = 0x.*}} } }
+ // { dg-final { regexp-test wq {std::weak_ptr.int \[2\]. \(use count 2, weak count 1\) = {get\(\) = 0x.*}} } }
+ 
+-  std::filesystem::path path0;
+-// { dg-final { note-test path0 {filesystem::path ""} } }
+-  std::filesystem::path path1("filename");
+-// { dg-final { note-test path1 {filesystem::path "filename"} } }
+-  std::filesystem::path path2("/dir/.");
+-// { dg-final { note-test path2 {filesystem::path "/dir/." = {[root-directory] = "/", [1] = "dir", [2] = "."}} } }
+-
+   std::cout << "\n";
+   return 0;			// Mark SPOT
+ }
