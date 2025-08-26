@@ -5,7 +5,7 @@
 %global gcc_major 8
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 26
+%global gcc_release 28
 %global nvptx_tools_gitrev c28050f60193b3b95a18866a96f03334e874e78f
 %global nvptx_newlib_gitrev aadc8eb0ec43b7cd0dd2dfb484bae63c8b05ef24
 %global _unpackaged_files_terminate_build 0
@@ -309,13 +309,14 @@ Patch47:              gcc8-pr111039.patch
 Patch48:              gcc8-pr111070.patch
 Patch49:              gcc8-RHEL-32886.patch
 Patch50:              gcc8-pr100508.patch
+Patch51:              gcc8-pr118976.patch
 
 # Any patches changing libstdc++-v3/python and its tests should go after this.
-Patch1000:            gcc8-libstdc++-prettyprinter-update-14.patch
-Patch1001:            gcc8-libstdc++-prettyprinter-update-14-tests.patch
-Patch1002:            gcc8-libstdc++-prettyprinter-update-14-tests-48362.patch
-Patch1003:            gcc8-libstdc++-prettyprinter-update-14-tests-cxx11.patch
-Patch1004:            gcc8-libstdc++-prettyprinter-update-14-tests-cxx17.patch
+Patch1000:            gcc8-libstdc++-prettyprinter-update-15.patch
+Patch1001:            gcc8-libstdc++-prettyprinter-update-15-tests.patch
+Patch1002:            gcc8-libstdc++-prettyprinter-update-15-tests-48362.patch
+Patch1003:            gcc8-libstdc++-prettyprinter-update-15-tests-cxx11.patch
+Patch1004:            gcc8-libstdc++-prettyprinter-update-15-tests-cxx17.patch
 
 Patch2000:            nvptx-tools-no-ptxas.patch
 Patch2001:            nvptx-tools-build.patch
@@ -941,6 +942,7 @@ so that there cannot be any synchronization problems.
 %patch48 -p1 -b .pr111070~
 %patch49 -p0 -b .32886~
 %patch50 -p1 -b .pr100508~
+%patch51 -p1 -b .pr118976~
 
 %patch1000 -p1 -b .libstdc++-prettyprinter-update-14~
 %patch1001 -p1 -b .libstdc++-prettyprinter-update-14-tests~
@@ -3354,6 +3356,12 @@ fi
 %{ANNOBIN_GCC_PLUGIN_DIR}/gcc-annobin.so.0.0.0
 
 %changelog
+* Mon Jun 23 2025 Siddhesh Poyarekar <siddhesh@redhat.com> 8.5.0-28
+- Sync libstdc++ pretty printers to latest GTS (RHEL-82506).
+
+* Thu May 29 2025 Joseph Myers <josmyers@redhat.com> - 8.5.0-27
+- Fix folding of BIT_NOT_EXPR for POLY_INT_CST (PR 118976, RHEL-90240)
+
 * Fri Mar 21 2025 Siddhesh Poyarekar <siddhesh@redhat.com> 8.5.0-26
 - Pin modification time for python files to SOURCE_DATE_EPOCH (RHEL-50290).
 

@@ -1,15 +1,15 @@
  libstdc++-v3/python/libstdcxx/v6/__init__.py |    4 +-
- libstdc++-v3/python/libstdcxx/v6/printers.py | 2593 +++++++++++++++++++-------
+ libstdc++-v3/python/libstdcxx/v6/printers.py | 2597 +++++++++++++++++++-------
  libstdc++-v3/python/libstdcxx/v6/xmethods.py |  170 +-
- 3 files changed, 2017 insertions(+), 750 deletions(-)
+ 3 files changed, 2021 insertions(+), 750 deletions(-)
 
 diff --git a/libstdc++-v3/python/libstdcxx/v6/__init__.py b/libstdc++-v3/python/libstdcxx/v6/__init__.py
-index b001c8520b6..f40acd922af 100644
+index b001c8520b6..5a8f2de195d 100644
 --- a/libstdc++-v3/python/libstdcxx/v6/__init__.py
 +++ b/libstdc++-v3/python/libstdcxx/v6/__init__.py
 @@ -1,4 +1,4 @@
 -# Copyright (C) 2014-2018 Free Software Foundation, Inc.
-+# Copyright (C) 2014-2024 Free Software Foundation, Inc.
++# Copyright (C) 2014-2025 Free Software Foundation, Inc.
  
  # This program is free software; you can redistribute it and/or modify
  # it under the terms of the GNU General Public License as published by
@@ -23,14 +23,14 @@ index b001c8520b6..f40acd922af 100644
  def gdb_has_xmethods():
      try:
 diff --git a/libstdc++-v3/python/libstdcxx/v6/printers.py b/libstdc++-v3/python/libstdcxx/v6/printers.py
-index ba9bbc096a0..3026de35bbd 100644
+index ba9bbc096a0..5f5963cb595 100644
 --- a/libstdc++-v3/python/libstdcxx/v6/printers.py
 +++ b/libstdc++-v3/python/libstdcxx/v6/printers.py
 @@ -1,6 +1,6 @@
  # Pretty-printers for libstdc++.
  
 -# Copyright (C) 2008-2018 Free Software Foundation, Inc.
-+# Copyright (C) 2008-2024 Free Software Foundation, Inc.
++# Copyright (C) 2008-2025 Free Software Foundation, Inc.
  
  # This program is free software; you can redistribute it and/or modify
  # it under the terms of the GNU General Public License as published by
@@ -443,7 +443,7 @@ index ba9bbc096a0..3026de35bbd 100644
      try:
          member = node.type.fields()[1].name
          if member == '_M_data':
-@@ -221,240 +400,281 @@ def get_value_from_list_node(node):
+@@ -221,240 +400,284 @@ def get_value_from_list_node(node):
          pass
      raise ValueError("Unsupported implementation for %s" % str(node.type))
  
@@ -779,6 +779,9 @@ index ba9bbc096a0..3026de35bbd 100644
 +
 +    def to_string(self):
 +        if not self._val['_M_p']:
++            # PR libstdc++/115098 removed the reference default constructor
++            # that this case relates to. New code should never need this,
++            # but we still handle it for compatibility with old binaries.
 +            return 'invalid std::vector<bool>::reference'
 +        return bool(self._val['_M_p'].dereference() & (self._val['_M_mask']))
 +
@@ -853,7 +856,7 @@ index ba9bbc096a0..3026de35bbd 100644
              else:
                  # Either a node before the last node, or the last node of
                  # a GCC 4.x tuple (which has an empty parent).
-@@ -463,53 +683,55 @@ class StdTuplePrinter:
+@@ -463,53 +686,55 @@ class StdTuplePrinter:
                  # - Right node is the actual class contained in the tuple.
  
                  # Process right node.
@@ -938,7 +941,7 @@ index ba9bbc096a0..3026de35bbd 100644
  class RbtreeIterator(Iterator):
      """
      Turn an RB-tree-based container (std::map, std::set etc.) into
-@@ -517,24 +739,24 @@ class RbtreeIterator(Iterator):
+@@ -517,24 +742,24 @@ class RbtreeIterator(Iterator):
      """
  
      def __init__(self, rbtree):
@@ -972,7 +975,7 @@ index ba9bbc096a0..3026de35bbd 100644
              if node.dereference()['_M_right']:
                  node = node.dereference()['_M_right']
                  while node.dereference()['_M_left']:
-@@ -546,11 +768,12 @@ class RbtreeIterator(Iterator):
+@@ -546,11 +771,12 @@ class RbtreeIterator(Iterator):
                      parent = parent.dereference()['_M_parent']
                  if node.dereference()['_M_right'] != parent:
                      node = parent
@@ -987,7 +990,7 @@ index ba9bbc096a0..3026de35bbd 100644
      try:
          member = node.type.fields()[1].name
          if member == '_M_value_field':
-@@ -567,143 +790,142 @@ def get_value_from_Rb_tree_node(node):
+@@ -567,143 +793,142 @@ def get_value_from_Rb_tree_node(node):
  # This is a pretty printer for std::_Rb_tree_iterator (which is
  # std::map::iterator), and has nothing to do with the RbtreeIterator
  # class above.
@@ -1207,7 +1210,7 @@ index ba9bbc096a0..3026de35bbd 100644
          except:
              return []
  
-@@ -713,7 +935,7 @@ class StdBitsetPrinter:
+@@ -713,7 +938,7 @@ class StdBitsetPrinter:
          # array.  This depends on the template specialization used.
          # If it is a single long, convert to a single element list.
          if wtype.code == gdb.TYPE_CODE_ARRAY:
@@ -1216,7 +1219,7 @@ index ba9bbc096a0..3026de35bbd 100644
          else:
              words = [words]
              tsize = wtype.sizeof
-@@ -733,279 +955,349 @@ class StdBitsetPrinter:
+@@ -733,279 +958,349 @@ class StdBitsetPrinter:
              byte = byte + 1
          return result
  
@@ -1709,7 +1712,7 @@ index ba9bbc096a0..3026de35bbd 100644
          global _use_type_printing
          if not _use_type_printing:
              return str(type)
-@@ -1013,35 +1305,37 @@ class SingleObjContainerPrinter(object):
+@@ -1013,35 +1308,37 @@ class SingleObjContainerPrinter(object):
                                                  type) or str(type)
  
      class _contained(Iterator):
@@ -1766,7 +1769,7 @@ index ba9bbc096a0..3026de35bbd 100644
  
      # Turn the function pointer into an actual address.
      # This is needed to unpack ppc64 function descriptors.
-@@ -1062,252 +1356,1003 @@ def function_pointer_to_name(f):
+@@ -1062,252 +1359,1003 @@ def function_pointer_to_name(f):
      except:
          return None
  
@@ -2127,31 +2130,41 @@ index ba9bbc096a0..3026de35bbd 100644
 +            self._item = cmpts['_M_impl']['_M_start']
 +            self._finish = cmpts['_M_impl']['_M_finish']
 +            self._count = 0
-+
-+        def __iter__(self):
-+            return self
-+
-+        def __next__(self):
+ 
+         def __iter__(self):
+             return self
+ 
+         def __next__(self):
+-            if self.item == self.finish:
 +            if self._item == self._finish:
-+                raise StopIteration
+                 raise StopIteration
+-            item = self.item.dereference()
+-            count = self.count
+-            self.count = self.count + 1
+-            self.item = self.item + 1
 +            item = self._item.dereference()
 +            count = self._count
 +            self._count = self._count + 1
 +            self._item = self._item + 1
-+            path = item['_M_pathname']
+             path = item['_M_pathname']
+-            t = StdExpPathPrinter(self.pathtype, item)._path_type()
 +            t = StdExpPathPrinter(self._pathtype, item)._path_type()
-+            if not t:
-+                t = count
-+            return ('[%s]' % t, path)
-+
-+    def children(self):
+             if not t:
+                 t = count
+             return ('[%s]' % t, path)
+ 
+     def children(self):
+-        return self._iterator(self.val['_M_cmpts'], self.typename)
 +        return self._iterator(self._val['_M_cmpts'], self._typename)
-+
-+
+ 
+ 
+-class StdPairPrinter:
+-    "Print a std::pair object, with 'first' and 'second' as children"
 +class StdPathPrinter(printer_base):
 +    """Print a std::filesystem::path."""
-+
-+    def __init__(self, typename, val):
+ 
+     def __init__(self, typename, val):
+-        self.val = val
 +        self._val = val
 +        self._typename = typename
 +        impl = unique_ptr_get(self._val['_M_cmpts']['_M_impl'])
@@ -2200,41 +2213,31 @@ index ba9bbc096a0..3026de35bbd 100644
 +            else:
 +                self._item = None
 +                self._finish = None
- 
-         def __iter__(self):
-             return self
- 
-         def __next__(self):
--            if self.item == self.finish:
++
++        def __iter__(self):
++            return self
++
++        def __next__(self):
 +            if self._item == self._finish:
-                 raise StopIteration
--            item = self.item.dereference()
--            count = self.count
--            self.count = self.count + 1
--            self.item = self.item + 1
++                raise StopIteration
 +            item = self._item.dereference()
 +            count = self._count
 +            self._count = self._count + 1
 +            self._item = self._item + 1
-             path = item['_M_pathname']
--            t = StdExpPathPrinter(self.pathtype, item)._path_type()
++            path = item['_M_pathname']
 +            t = StdPathPrinter(self._pathtype, item)._path_type()
-             if not t:
-                 t = count
-             return ('[%s]' % t, path)
- 
-     def children(self):
--        return self._iterator(self.val['_M_cmpts'], self.typename)
++            if not t:
++                t = count
++            return ('[%s]' % t, path)
++
++    def children(self):
 +        return self._iterator(self._impl, self._typename)
- 
- 
--class StdPairPrinter:
--    "Print a std::pair object, with 'first' and 'second' as children"
++
++
 +class StdPairPrinter(printer_base):
 +    """Print a std::pair object, with 'first' and 'second' as children."""
- 
-     def __init__(self, typename, val):
--        self.val = val
++
++    def __init__(self, typename, val):
 +        self._val = val
  
      class _iter(Iterator):
@@ -2895,7 +2898,7 @@ index ba9bbc096a0..3026de35bbd 100644
          self.enabled = True
  
      def invoke(self, value):
-@@ -1315,36 +2360,40 @@ class RxPrinter(object):
+@@ -1315,36 +2363,40 @@ class RxPrinter(object):
              return None
  
          if value.type.code == gdb.TYPE_CODE_REF:
@@ -2947,7 +2950,7 @@ index ba9bbc096a0..3026de35bbd 100644
              self.add(vbase + name, function)
  
      # Add a name using _GLIBCXX_BEGIN_NAMESPACE_CONTAINER.
-@@ -1356,10 +2405,10 @@ class Printer(object):
+@@ -1356,10 +2408,10 @@ class Printer(object):
      def get_basic_type(type):
          # If it points to a reference, get the reference.
          if type.code == gdb.TYPE_CODE_REF:
@@ -2960,7 +2963,7 @@ index ba9bbc096a0..3026de35bbd 100644
  
          return type.tag
  
-@@ -1370,47 +2419,49 @@ class Printer(object):
+@@ -1370,47 +2422,49 @@ class Printer(object):
  
          # All the types we match are template types, so we can use a
          # dictionary.
@@ -3020,7 +3023,7 @@ index ba9bbc096a0..3026de35bbd 100644
  
          def recognize(self, type_obj):
              """
-@@ -1433,7 +2484,7 @@ class TemplateTypePrinter(object):
+@@ -1433,7 +2487,7 @@ class TemplateTypePrinter(object):
                  # The actual template argument in the type:
                  targ = template_args[n]
                  # The default template argument for the class template:
@@ -3029,7 +3032,7 @@ index ba9bbc096a0..3026de35bbd 100644
                  if defarg is not None:
                      # Substitute other template arguments into the default:
                      defarg = defarg.format(*template_args)
-@@ -1470,7 +2521,7 @@ class TemplateTypePrinter(object):
+@@ -1470,7 +2524,7 @@ class TemplateTypePrinter(object):
              if type_obj.code == gdb.TYPE_CODE_ARRAY:
                  type_str = self._recognize_subtype(type_obj.target())
                  if str(type_obj.strip_typedefs()).endswith('[]'):
@@ -3038,7 +3041,7 @@ index ba9bbc096a0..3026de35bbd 100644
                  return "%s[%d]" % (type_str, type_obj.range()[1] + 1)
              if type_obj.code == gdb.TYPE_CODE_REF:
                  return self._recognize_subtype(type_obj.target()) + '&'
-@@ -1479,17 +2530,18 @@ class TemplateTypePrinter(object):
+@@ -1479,17 +2533,18 @@ class TemplateTypePrinter(object):
                      return self._recognize_subtype(type_obj.target()) + '&&'
  
              type_str = gdb.types.apply_type_recognizers(
@@ -3061,7 +3064,7 @@ index ba9bbc096a0..3026de35bbd 100644
      Add a type printer for a class template with default template arguments.
  
      Args:
-@@ -1503,78 +2555,121 @@ def add_one_template_type_printer(obj, name, defargs):
+@@ -1503,78 +2558,121 @@ def add_one_template_type_printer(obj, name, defargs):
      { 2: 'std::hash<{0}>',
        3: 'std::equal_to<{0}>',
        4: 'std::allocator<std::pair<const {0}, {1}> >' }
@@ -3069,12 +3072,12 @@ index ba9bbc096a0..3026de35bbd 100644
      """
 -    printer = TemplateTypePrinter('std::'+name, defargs)
 +    printer = TemplateTypePrinter('std::' + name, defargs)
-+    gdb.types.register_type_printer(obj, printer)
+     gdb.types.register_type_printer(obj, printer)
+-    if _versioned_namespace:
 +
 +    # Add type printer for same type in debug namespace:
 +    printer = TemplateTypePrinter('std::__debug::' + name, defargs)
-     gdb.types.register_type_printer(obj, printer)
--    if _versioned_namespace:
++    gdb.types.register_type_printer(obj, printer)
 +
 +    if '__cxx11' not in name:
          # Add second type printer for same type in versioned namespace:
@@ -3190,10 +3193,10 @@ index ba9bbc096a0..3026de35bbd 100644
 -        return self._recognizer(self.match, self.name)
 +        """Return a recognizer object for this type printer."""
 +        return self._recognizer(self._template, self.name, self._targ1)
++
  
 -def add_one_type_printer(obj, match, name):
 -    printer = FilteringTypePrinter('std::' + match, 'std::' + name)
-+
 +def add_one_type_printer(obj, template, name, targ1=None):
 +    printer = FilteringTypePrinter('std::' + template, 'std::' + name, targ1)
      gdb.types.register_type_printer(obj, printer)
@@ -3208,7 +3211,7 @@ index ba9bbc096a0..3026de35bbd 100644
  def register_type_printers(obj):
      global _use_type_printing
  
-@@ -1582,29 +2677,39 @@ def register_type_printers(obj):
+@@ -1582,29 +2680,39 @@ def register_type_printers(obj):
          return
  
      # Add type printers for typedefs std::string, std::wstring etc.
@@ -3220,12 +3223,12 @@ index ba9bbc096a0..3026de35bbd 100644
 +               ('u16', 'char16_t'),
 +               ('u32', 'char32_t')):
 +        add_one_type_printer(obj, 'basic_string', ch[0] + 'string', ch[1])
-+        add_one_type_printer(obj, '__cxx11::basic_string',
-+                             ch[0] + 'string', ch[1])
-+        # Typedefs for __cxx11::basic_string used to be in namespace __cxx11:
          add_one_type_printer(obj, '__cxx11::basic_string',
 -                             '__cxx11::' + ch + 'string')
 -        add_one_type_printer(obj, 'basic_string_view', ch + 'string_view')
++                             ch[0] + 'string', ch[1])
++        # Typedefs for __cxx11::basic_string used to be in namespace __cxx11:
++        add_one_type_printer(obj, '__cxx11::basic_string',
 +                             '__cxx11::' + ch[0] + 'string', ch[1])
 +        add_one_type_printer(obj, 'basic_string_view',
 +                             ch[0] + 'string_view', ch[1])
@@ -3260,7 +3263,7 @@ index ba9bbc096a0..3026de35bbd 100644
              for x in ('sub_match', 'regex_iterator', 'regex_token_iterator'):
                  add_one_type_printer(obj, abi + x, abi + ch + x)
  
-@@ -1613,9 +2718,9 @@ def register_type_printers(obj):
+@@ -1613,9 +2721,9 @@ def register_type_printers(obj):
      add_one_type_printer(obj, 'fpos', 'streampos')
  
      # Add type printers for <chrono> typedefs.
@@ -3273,7 +3276,7 @@ index ba9bbc096a0..3026de35bbd 100644
  
      # Add type printers for <random> typedefs.
      add_one_type_printer(obj, 'linear_congruential_engine', 'minstd_rand0')
-@@ -1630,47 +2735,54 @@ def register_type_printers(obj):
+@@ -1630,47 +2738,54 @@ def register_type_printers(obj):
  
      # Add type printers for experimental::basic_string_view typedefs.
      ns = 'experimental::fundamentals_v1::'
@@ -3347,16 +3350,16 @@ index ba9bbc096a0..3026de35bbd 100644
 +                                  {1: 'std::hash<{0}>',
 +                                   2: 'std::equal_to<{0}>',
 +                                   3: 'std::allocator<{0}>'})
++
  
 -def register_libstdcxx_printers (obj):
 -    "Register libstdc++ pretty-printers with objfile Obj."
-+
 +def register_libstdcxx_printers(obj):
 +    """Register libstdc++ pretty-printers with objfile Obj."""
  
      global _use_gdb_pp
      global libstdcxx_printer
-@@ -1684,7 +2796,8 @@ def register_libstdcxx_printers (obj):
+@@ -1684,7 +2799,8 @@ def register_libstdcxx_printers (obj):
  
      register_type_printers(obj)
  
@@ -3366,7 +3369,7 @@ index ba9bbc096a0..3026de35bbd 100644
      global libstdcxx_printer
  
      libstdcxx_printer = Printer("libstdc++-v6")
-@@ -1693,7 +2806,8 @@ def build_libstdcxx_dictionary ():
+@@ -1693,7 +2809,8 @@ def build_libstdcxx_dictionary ():
      # In order from:
      # http://gcc.gnu.org/onlinedocs/libstdc++/latest-doxygen/a01847.html
      libstdcxx_printer.add_version('std::', 'basic_string', StdStringPrinter)
@@ -3376,16 +3379,12 @@ index ba9bbc096a0..3026de35bbd 100644
      libstdcxx_printer.add_container('std::', 'bitset', StdBitsetPrinter)
      libstdcxx_printer.add_container('std::', 'deque', StdDequePrinter)
      libstdcxx_printer.add_container('std::', 'list', StdListPrinter)
-@@ -1711,6 +2825,18 @@ def build_libstdcxx_dictionary ():
+@@ -1711,6 +2828,14 @@ def build_libstdcxx_dictionary ():
      libstdcxx_printer.add_version('std::', 'unique_ptr', UniquePointerPrinter)
      libstdcxx_printer.add_container('std::', 'vector', StdVectorPrinter)
      # vector<bool>
 +    libstdcxx_printer.add_version('std::', 'locale', StdLocalePrinter)
 +
-+    libstdcxx_printer.add_version('std::', 'integral_constant',
-+                                  StdIntegralConstantPrinter)
-+    libstdcxx_printer.add_version('std::', 'text_encoding',
-+                                  StdTextEncodingPrinter)
 +
 +    if hasattr(gdb.Value, 'dynamic_type'):
 +        libstdcxx_printer.add_version('std::', 'error_code',
@@ -3395,7 +3394,7 @@ index ba9bbc096a0..3026de35bbd 100644
  
      # Printer registrations for classes compiled with -D_GLIBCXX_DEBUG.
      libstdcxx_printer.add('std::__debug::bitset', StdBitsetPrinter)
-@@ -1719,12 +2845,7 @@ def build_libstdcxx_dictionary ():
+@@ -1719,12 +2844,7 @@ def build_libstdcxx_dictionary ():
      libstdcxx_printer.add('std::__debug::map', StdMapPrinter)
      libstdcxx_printer.add('std::__debug::multimap', StdMapPrinter)
      libstdcxx_printer.add('std::__debug::multiset', StdSetPrinter)
@@ -3408,7 +3407,7 @@ index ba9bbc096a0..3026de35bbd 100644
      libstdcxx_printer.add('std::__debug::vector', StdVectorPrinter)
  
      # These are the TR1 and C++11 printers.
-@@ -1742,8 +2863,10 @@ def build_libstdcxx_dictionary ():
+@@ -1742,8 +2862,10 @@ def build_libstdcxx_dictionary ():
      libstdcxx_printer.add_container('std::', 'forward_list',
                                      StdForwardListPrinter)
  
@@ -3421,7 +3420,7 @@ index ba9bbc096a0..3026de35bbd 100644
      libstdcxx_printer.add_version('std::tr1::', 'unordered_map',
                                    Tr1UnorderedMapPrinter)
      libstdcxx_printer.add_version('std::tr1::', 'unordered_set',
-@@ -1753,6 +2876,28 @@ def build_libstdcxx_dictionary ():
+@@ -1753,6 +2875,30 @@ def build_libstdcxx_dictionary ():
      libstdcxx_printer.add_version('std::tr1::', 'unordered_multiset',
                                    Tr1UnorderedSetPrinter)
  
@@ -3442,6 +3441,8 @@ index ba9bbc096a0..3026de35bbd 100644
 +                                  StdChronoDurationPrinter)
 +    libstdcxx_printer.add_version('std::chrono::', 'time_point',
 +                                  StdChronoTimePointPrinter)
++    libstdcxx_printer.add_version('std::', 'integral_constant',
++                                  StdIntegralConstantPrinter)
 +
 +    # std::regex components
 +    libstdcxx_printer.add_version('std::__detail::', '_State',
@@ -3450,7 +3451,7 @@ index ba9bbc096a0..3026de35bbd 100644
      # These are the C++11 printer registrations for -D_GLIBCXX_DEBUG cases.
      # The tr1 namespace containers do not have any debug equivalents,
      # so do not register printers for them.
-@@ -1780,9 +2925,9 @@ def build_libstdcxx_dictionary ():
+@@ -1780,9 +2926,9 @@ def build_libstdcxx_dictionary ():
      libstdcxx_printer.add_version('std::experimental::filesystem::v1::__cxx11::',
                                    'path', StdExpPathPrinter)
      libstdcxx_printer.add_version('std::filesystem::',
@@ -3462,7 +3463,7 @@ index ba9bbc096a0..3026de35bbd 100644
  
      # C++17 components
      libstdcxx_printer.add_version('std::',
-@@ -1796,6 +2941,33 @@ def build_libstdcxx_dictionary ():
+@@ -1796,6 +2942,36 @@ def build_libstdcxx_dictionary ():
      libstdcxx_printer.add_version('std::',
                                    '_Node_handle', StdNodeHandlePrinter)
  
@@ -3493,10 +3494,13 @@ index ba9bbc096a0..3026de35bbd 100644
 +    # libstdcxx_printer.add_version('std::chrono::(anonymous namespace)', 'Rule',
 +    #                              StdChronoTimeZoneRulePrinter)
 +
++    # C++26 components
++    libstdcxx_printer.add_version('std::', 'text_encoding',
++                                  StdTextEncodingPrinter)
      # Extensions.
      libstdcxx_printer.add_version('__gnu_cxx::', 'slist', StdSlistPrinter)
  
-@@ -1816,6 +2988,12 @@ def build_libstdcxx_dictionary ():
+@@ -1816,6 +2992,12 @@ def build_libstdcxx_dictionary ():
                                          StdDequeIteratorPrinter)
          libstdcxx_printer.add_version('__gnu_cxx::', '__normal_iterator',
                                        StdVectorIteratorPrinter)
@@ -3509,7 +3513,7 @@ index ba9bbc096a0..3026de35bbd 100644
          libstdcxx_printer.add_version('__gnu_cxx::', '_Slist_iterator',
                                        StdSlistIteratorPrinter)
          libstdcxx_printer.add_container('std::', '_Fwd_list_iterator',
-@@ -1828,4 +3006,5 @@ def build_libstdcxx_dictionary ():
+@@ -1828,4 +3010,5 @@ def build_libstdcxx_dictionary ():
          libstdcxx_printer.add('__gnu_debug::_Safe_iterator',
                                StdDebugIteratorPrinter)
  
@@ -3517,14 +3521,14 @@ index ba9bbc096a0..3026de35bbd 100644
 +
 +build_libstdcxx_dictionary()
 diff --git a/libstdc++-v3/python/libstdcxx/v6/xmethods.py b/libstdc++-v3/python/libstdcxx/v6/xmethods.py
-index 12fefdb041c..436c866e001 100644
+index 12fefdb041c..109ca10956a 100644
 --- a/libstdc++-v3/python/libstdcxx/v6/xmethods.py
 +++ b/libstdc++-v3/python/libstdcxx/v6/xmethods.py
 @@ -1,6 +1,6 @@
  # Xmethods for libstdc++.
  
 -# Copyright (C) 2014-2018 Free Software Foundation, Inc.
-+# Copyright (C) 2014-2024 Free Software Foundation, Inc.
++# Copyright (C) 2014-2025 Free Software Foundation, Inc.
  
  # This program is free software; you can redistribute it and/or modify
  # it under the terms of the GNU General Public License as published by

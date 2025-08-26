@@ -6,7 +6,7 @@
  5 files changed, 146 insertions(+), 78 deletions(-)
 
 diff --git a/libstdc++-v3/testsuite/libstdc++-prettyprinters/compat.cc b/libstdc++-v3/testsuite/libstdc++-prettyprinters/compat.cc
-index 81e0ce7213f..604a6f6415b 100644
+index 81e0ce7213f..2ef5979834f 100644
 --- a/libstdc++-v3/testsuite/libstdc++-prettyprinters/compat.cc
 +++ b/libstdc++-v3/testsuite/libstdc++-prettyprinters/compat.cc
 @@ -1,8 +1,7 @@
@@ -15,7 +15,7 @@ index 81e0ce7213f..604a6f6415b 100644
 -// { dg-skip-if "" { *-*-* } { "-D_GLIBCXX_PROFILE" } }
  
 -// Copyright (C) 2014-2019 Free Software Foundation, Inc.
-+// Copyright (C) 2014-2024 Free Software Foundation, Inc.
++// Copyright (C) 2014-2025 Free Software Foundation, Inc.
  //
  // This file is part of the GNU ISO C++ Library.  This library is free
  // software; you can redistribute it and/or modify it under the
@@ -38,7 +38,7 @@ index 81e0ce7213f..604a6f6415b 100644
    __builtin_puts("");
    return 0;			// Mark SPOT
 diff --git a/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx11.cc b/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx11.cc
-index 9a90d8d91db..2f75d12703c 100644
+index 9a90d8d91db..23f6d97ddd4 100644
 --- a/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx11.cc
 +++ b/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx11.cc
 @@ -1,8 +1,7 @@
@@ -47,7 +47,7 @@ index 9a90d8d91db..2f75d12703c 100644
 -// { dg-skip-if "" { *-*-* } { "-D_GLIBCXX_PROFILE" } }
  
 -// Copyright (C) 2011-2018 Free Software Foundation, Inc.
-+// Copyright (C) 2011-2024 Free Software Foundation, Inc.
++// Copyright (C) 2011-2025 Free Software Foundation, Inc.
  //
  // This file is part of the GNU ISO C++ Library.  This library is free
  // software; you can redistribute it and/or modify it under the
@@ -251,7 +251,7 @@ index 9a90d8d91db..2f75d12703c 100644
    use(efl);
    use(fl);
 diff --git a/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx17.cc b/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx17.cc
-index 0c7cb4c9bb6..c8b70622bef 100644
+index 0c7cb4c9bb6..6dd2b60c0a5 100644
 --- a/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx17.cc
 +++ b/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx17.cc
 @@ -1,8 +1,7 @@
@@ -261,7 +261,7 @@ index 0c7cb4c9bb6..c8b70622bef 100644
 -// { dg-skip-if "" { *-*-* } { "-D_GLIBCXX_PROFILE" } }
  
 -// Copyright (C) 2014-2018 Free Software Foundation, Inc.
-+// Copyright (C) 2014-2024 Free Software Foundation, Inc.
++// Copyright (C) 2014-2025 Free Software Foundation, Inc.
  //
  // This file is part of the GNU ISO C++ Library.  This library is free
  // software; you can redistribute it and/or modify it under the
@@ -361,7 +361,7 @@ index 0c7cb4c9bb6..c8b70622bef 100644
    return 0;			// Mark SPOT
  }
 diff --git a/libstdc++-v3/testsuite/libstdc++-prettyprinters/filesystem-ts.cc b/libstdc++-v3/testsuite/libstdc++-prettyprinters/filesystem-ts.cc
-index 8a1398f6c85..9faeed02852 100644
+index 8a1398f6c85..3221f2df90d 100644
 --- a/libstdc++-v3/testsuite/libstdc++-prettyprinters/filesystem-ts.cc
 +++ b/libstdc++-v3/testsuite/libstdc++-prettyprinters/filesystem-ts.cc
 @@ -2,7 +2,7 @@
@@ -369,7 +369,7 @@ index 8a1398f6c85..9faeed02852 100644
  // { dg-require-filesystem-ts "" }
  
 -// Copyright (C) 2020 Free Software Foundation, Inc.
-+// Copyright (C) 2020-2024 Free Software Foundation, Inc.
++// Copyright (C) 2020-2025 Free Software Foundation, Inc.
  //
  // This file is part of the GNU ISO C++ Library.  This library is free
  // software; you can redistribute it and/or modify it under the
@@ -389,7 +389,7 @@ index 8a1398f6c85..9faeed02852 100644
    std::cout << "\n";
    return 0;			// Mark SPOT
 diff --git a/libstdc++-v3/testsuite/libstdc++-prettyprinters/libfundts.cc b/libstdc++-v3/testsuite/libstdc++-prettyprinters/libfundts.cc
-index ea13ebe71ee..7a6ee8d281e 100644
+index ea13ebe71ee..bfb86885457 100644
 --- a/libstdc++-v3/testsuite/libstdc++-prettyprinters/libfundts.cc
 +++ b/libstdc++-v3/testsuite/libstdc++-prettyprinters/libfundts.cc
 @@ -1,8 +1,7 @@
@@ -398,7 +398,7 @@ index ea13ebe71ee..7a6ee8d281e 100644
 -// { dg-skip-if "" { *-*-* } { "-D_GLIBCXX_PROFILE" } }
  
 -// Copyright (C) 2014-2018 Free Software Foundation, Inc.
-+// Copyright (C) 2014-2024 Free Software Foundation, Inc.
++// Copyright (C) 2014-2025 Free Software Foundation, Inc.
  //
  // This file is part of the GNU ISO C++ Library.  This library is free
  // software; you can redistribute it and/or modify it under the
