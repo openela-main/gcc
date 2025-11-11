@@ -1,10 +1,10 @@
-%global DATE 20250110
-%global gitrev e525669e462dd777a1af9932fe9188937acdeb69
-%global gcc_version 14.2.1
+%global DATE 20250617
+%global gitrev 74a421064f3d0de5d604bc051d9c21c1b9763064
+%global gcc_version 14.3.1
 %global gcc_major 14
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 7
+%global gcc_release 2
 %global nvptx_tools_gitrev 87ce9dc5999e5fca2e1d3478a30888d9864c9804
 %global newlib_cygwin_gitrev d45261f62a15f8abd94a1031020b9a9f455e4eed
 %global _unpackaged_files_terminate_build 0
@@ -143,7 +143,7 @@
 Summary: Various compilers (C, C++, Objective-C, ...)
 Name: gcc
 Version: %{gcc_version}
-Release: %{gcc_release}%{?dist}
+Release: %{gcc_release}.1%{?dist}
 # License notes for some of the less obvious ones:
 #   gcc/doc/cppinternals.texi: Linux-man-pages-copyleft-2-para
 #   isl: MIT, BSD-2-Clause
@@ -305,11 +305,14 @@ Patch9: gcc14-Wno-format-security.patch
 Patch10: gcc14-rh1574936.patch
 Patch11: gcc14-d-shared-libphobos.patch
 Patch12: gcc14-pr101523.patch
-Patch13: gcc14-pr118509.patch
 
 Patch50: isl-rh2155127.patch
 
 Patch100: gcc14-fortran-fdec-duplicates.patch
+
+# Pretty printer updates for GTS
+Patch1000: gcc14-libstdc++-prettyprinter-update-15.patch
+Patch1001: gcc14-libstdc++-prettyprinter-update-15-tests.patch
 
 # On ARM EABI systems, we do want -gnueabi to be part of the
 # target triple.
@@ -907,7 +910,6 @@ so that there cannot be any synchronization problems.
 %endif
 %patch -P11 -p0 -b .d-shared-libphobos~
 %patch -P12 -p1 -b .pr101523~
-%patch -P13 -p0 -b .pr118509~
 
 %patch -P50 -p0 -b .rh2155127~
 touch -r isl-0.24/m4/ax_prog_cxx_for_build.m4 isl-0.24/m4/ax_prog_cc_for_build.m4
@@ -915,6 +917,9 @@ touch -r isl-0.24/m4/ax_prog_cxx_for_build.m4 isl-0.24/m4/ax_prog_cc_for_build.m
 %if 0%{?rhel} >= 9
 %patch -P100 -p1 -b .fortran-fdec-duplicates~
 %endif
+
+%patch -P1000 -p1 -b .libstdc++-prettyprinter-update-15
+%patch -P1001 -p1 -b .libstdc++-prettyprinter-update-15-tests
 
 %ifarch %{arm}
 rm -f gcc/testsuite/go.test/test/fixedbugs/issue19182.go
@@ -1230,7 +1235,9 @@ CONFIGURE_OPTS="\
 %if 0%{?rhel} >= 7
 %if 0%{?rhel} > 7
 %if 0%{?rhel} > 8
-%if 0%{?rhel} >= 9
+%if 0%{?rhel} >= 10
+	--with-arch=z14 --with-tune=z16 \
+%elif 0%{?rhel} >= 9
 	--with-arch=z14 --with-tune=z15 \
 %else
 	--with-arch=z13 --with-tune=arch13 \
@@ -2670,6 +2677,8 @@ end
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/include/arm_fp16.h
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/include/arm_bf16.h
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/include/arm_sve.h
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/include/arm_neon_sve_bridge.h
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/include/arm_sme.h
 %endif
 %ifarch sparc sparcv9 sparc64
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/include/visintrin.h
@@ -3620,6 +3629,126 @@ end
 %endif
 
 %changelog
+* Mon Jun 23 2025 Siddhesh Poyarekar <siddhesh@redhat.com> - 14.3.1-2.1
+- Update to latest pretty printers from GTS (RHEL-81976)
+
+* Thu Jun 19 2025 Joseph Myers <josmyers@redhat.com> - 14.3.1-2
+- update from releases/gcc-14 branch (RHEL-83953)
+  - GCC 14.3 release
+  - PRs ada/112958, ada/118712, ada/119265, c/100420, c/112556,
+	c/113688, c/114014, c/114713, c/114870, c/116284, c/117145,
+	c/117245, c/117391, c/117724, c/117806, c/119000, c/119183,
+	c/119582, c++/79786, c++/86769, c++/98533, c++/98935,
+	c++/99214, c++/99546, c++/100476, c++/101180, c++/102051,
+	c++/105104, c++/105475, c++/106973, c++/106976, c++/107522,
+	c++/109464, c++/109682, c++/109961, c++/110635, c++/110871,
+	c++/110872, c++/111075, c++/111728, c++/112341, c++/113457,
+	c++/113773, c++/113835, c++/113925, c++/114292, c++/114525,
+	c++/114630, c++/114772, c++/114970, c++/114992, c++/115434,
+	c++/115580, c++/115586, c++/115905, c++/115906, c++/116379,
+	c++/116482, c++/116502, c++/116506, c++/116681, c++/116731,
+	c++/116793, c++/116880, c++/116954, c++/116960, c++/117153,
+	c++/117336, c++/117501, c++/117504, c++/117512, c++/117530,
+	c++/117775, c++/117778, c++/117827, c++/117849, c++/117855,
+	c++/118047, c++/118049, c++/118053, c++/118104, c++/118147,
+	c++/118245, c++/118255, c++/118285, c++/118355, c++/118509,
+	c++/118590, c++/118629, c++/118655, c++/118661, c++/118673,
+	c++/118763, c++/118775, c++/118822, c++/118849, c++/119038,
+	c++/119045, c++/119123, c++/119134, c++/119150, c++/119175,
+	c++/119194, c++/119233, c++/119303, c++/119316, c++/119344,
+	c++/119345, c++/119378, c++/119383, c++/119387, c++/119574,
+	c++/119652, c++/119687, c++/119807, c++/119981, c++/120123,
+	c++/120125, c++/120161, d/114434, d/115249, d/116373,
+	d/116961, d/117002, d/117115, d/117621, d/118309, d/118477,
+	d/119112, d/119139, d/119817, d/119826, debug/101533,
+	driver/117739, driver/119727, fortran/59252, fortran/81978,
+	fortran/85750, fortran/98454, fortran/103391, fortran/106692,
+	fortran/106948, fortran/108434, fortran/108454,
+	fortran/109066, fortran/110993, fortran/116706,
+	fortran/117434, fortran/118080, fortran/118640,
+	fortran/118683, fortran/118750, fortran/119054,
+	fortran/119380, fortran/119656, fortran/119986,
+	fortran/120191, gcov-profile/116743, ipa/111245, ipa/113197,
+	ipa/116572, ipa/117432, ipa/118243, ipa/118318, ipa/118400,
+	ipa/119067, ipa/119852, jit/118780, libfortran/118571,
+	libfortran/120196, libgcc/101075, libgcc/119151,
+	libgcc/119796, libstdc++/21334, libstdc++/90389,
+	libstdc++/99832, libstdc++/100249, libstdc++/101527,
+	libstdc++/101587, libstdc++/104395, libstdc++/105258,
+	libstdc++/105609, libstdc++/106612, libstdc++/108487,
+	libstdc++/108760, libstdc++/108846, libstdc++/110498,
+	libstdc++/112490, libstdc++/112803, libstdc++/114758,
+	libstdc++/114945, libstdc++/115046, libstdc++/115285,
+	libstdc++/115939, libstdc++/116212, libstdc++/116440,
+	libstdc++/116471, libstdc++/117121, libstdc++/117921,
+	libstdc++/117983, libstdc++/118083, libstdc++/118158,
+	libstdc++/118160, libstdc++/118185, libstdc++/118413,
+	libstdc++/118699, libstdc++/118811, libstdc++/119121,
+	libstdc++/119135, libstdc++/119429, libstdc++/119469,
+	libstdc++/119593, libstdc++/119671, libstdc++/120198,
+	libstdc++/120548, lto/91299, lto/113207, lto/114501,
+	lto/119625, lto/119792, middle-end/66279, middle-end/101478,
+	middle-end/111285, middle-end/113546, middle-end/114877,
+	middle-end/115871, middle-end/115913, middle-end/117498,
+	middle-end/117811, middle-end/118140, middle-end/118411,
+	middle-end/118819, middle-end/118950, middle-end/119119,
+	middle-end/119204, middle-end/119219, middle-end/119706,
+	middle-end/119808, middle-end/120547, modula2/115032,
+	modula2/115112, modula2/118703, modula2/118761,
+	preprocessor/108900, preprocessor/116047, preprocessor/120061,
+	rtl-optimization/115568, rtl-optimization/116564,
+	rtl-optimization/117186, rtl-optimization/117239,
+	rtl-optimization/117506, rtl-optimization/118320,
+	rtl-optimization/118638, rtl-optimization/118662,
+	rtl-optimization/118739, rtl-optimization/119071,
+	rtl-optimization/119291, rtl-optimization/119689,
+	rtl-optimization/119785, target/86772, target/106544,
+	target/110901, target/113257, target/115258, target/115485,
+	target/116036, target/116086, target/116111, target/116149,
+	target/116240, target/116256, target/116305, target/116308,
+	target/116550, target/116591, target/116592, target/116593,
+	target/116693, target/116720, target/116809, target/116827,
+	target/116927, target/117286, target/117383, target/117483,
+	target/117544, target/117682, target/117878, target/118067,
+	target/118137, target/118154, target/118182, target/118184,
+	target/118329, target/118357, target/118501, target/118531,
+	target/118561, target/118601, target/118623, target/118685,
+	target/118776, target/118813, target/118815, target/118825,
+	target/118835, target/118843, target/118844, target/118892,
+	target/118942, target/119084, target/119133, target/119172,
+	target/119235, target/119327, target/119340, target/119383,
+	target/119386, target/119408, target/119450, target/119533,
+	target/119547, target/119549, target/119572, target/119610,
+	target/119784, target/119834, target/120441, target/120480,
+	testsuite/52641, testsuite/116448, testsuite/118127,
+	testsuite/118597, tree-optimization/117358,
+	tree-optimization/120638 tree-optimization/87984,
+	tree-optimization/98845, tree-optimization/111873,
+	tree-optimization/112859, tree-optimization/113197,
+	tree-optimization/114052, tree-optimization/115347,
+	tree-optimization/115494, tree-optimization/116098,
+	tree-optimization/116125, tree-optimization/116412,
+	tree-optimization/116749, tree-optimization/116906,
+	tree-optimization/116922, tree-optimization/117113,
+	tree-optimization/117119, tree-optimization/117243,
+	tree-optimization/117424, tree-optimization/117919,
+	tree-optimization/117979, tree-optimization/118476,
+	tree-optimization/118522, tree-optimization/118605,
+	tree-optimization/118653, tree-optimization/118689,
+	tree-optimization/118717, tree-optimization/118915,
+	tree-optimization/118922, tree-optimization/118924,
+	tree-optimization/118953, tree-optimization/118976,
+	tree-optimization/119057, tree-optimization/119096,
+	tree-optimization/119145, tree-optimization/119351,
+	tree-optimization/119399, tree-optimization/119417,
+	tree-optimization/119534, tree-optimization/119706,
+	tree-optimization/119707, tree-optimization/119722,
+	tree-optimization/119778, tree-optimization/120048,
+	tree-optimization/120156
+
+* Mon May 26 2025 Siddhesh Poyarekar <siddhesh@redhat.com> 14.2.1-8
+- Tune for z16 on s390x by default on RHEL10 and later (RHEL-86679)
+
 * Tue Jan 21 2025 Marek Polacek <polacek@redhat.com> 14.2.1-7
 - update from releases/gcc-14 branch (RHEL-65532)
   - PRs ada/113036, ada/113868, ada/115917, ada/117328, ada/117996,
