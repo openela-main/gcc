@@ -1,0 +1,244 @@
+From 90c31ff339015ddd89ac519656fbd23a36ee6271 Mon Sep 17 00:00:00 2001
+From: Allan McRae <allan@archlinux.org>
+Date: Fri, 28 Jan 2022 12:44:08 -0500
+Subject: testsuite/70230 - fix failures with default SSP\
+
+Configuring with --enable-default-ssp triggers various testsuite
+failures.  These contain asm statements that are not compatible with
+-fstack-protector.  Adding -fno-stack-protector to dg-options to
+work around this issue.
+
+Tested on x86_64-linux.
+
+	PR testsuite/70230
+	* gcc.dg/asan/use-after-scope-4.c (dg-options): Add
+	-fno-stack-protector.
+	* gcc.dg/stack-usage-1.c: Likewise
+	* gcc.dg/superblock.c: Likewise
+	* gcc.target/i386/avx-vzeroupper-17.c: Likewise
+	* gcc.target/i386/cleanup-1.c: Likewise
+	* gcc.target/i386/cleanup-2.c: Likewise
+	* gcc.target/i386/interrupt-redzone-1.c: Likewise
+	* gcc.target/i386/interrupt-redzone-2.c: Likewise
+	* gcc.target/i386/pr79793-1.c: Likewise
+	* gcc.target/i386/pr79793-2.c: Likewise
+	* gcc.target/i386/shrink_wrap_1.c: Likewise
+	* gcc.target/i386/stack-check-11.c: Likewise
+	* gcc.target/i386/stack-check-18.c: Likewise
+	* gcc.target/i386/stack-check-19.c: Likewise
+	* gcc.target/i386/stackalign/pr88483-1.c: Likewise
+	* gcc.target/i386/stackalign/pr88483-2.c: Likewise
+	* gcc.target/i386/sw-1.c: Likewise
+
+Backported to gcc 11 by dmalcolm@redhat.com
+  This was r12-6922-g90c31ff339015d, modifying the change to sw-1.c
+  to avoid the change from r12-2671-gdadbb1a886af95.
+
+---
+ gcc/testsuite/gcc.dg/asan/use-after-scope-4.c        | 1 +
+ gcc/testsuite/gcc.dg/stack-usage-1.c                 | 2 +-
+ gcc/testsuite/gcc.dg/superblock.c                    | 2 +-
+ gcc/testsuite/gcc.target/i386/avx-vzeroupper-17.c    | 2 +-
+ gcc/testsuite/gcc.target/i386/cleanup-1.c            | 2 +-
+ gcc/testsuite/gcc.target/i386/cleanup-2.c            | 2 +-
+ gcc/testsuite/gcc.target/i386/interrupt-redzone-1.c  | 2 +-
+ gcc/testsuite/gcc.target/i386/interrupt-redzone-2.c  | 2 +-
+ gcc/testsuite/gcc.target/i386/pr79793-1.c            | 2 +-
+ gcc/testsuite/gcc.target/i386/pr79793-2.c            | 2 +-
+ gcc/testsuite/gcc.target/i386/shrink_wrap_1.c        | 2 +-
+ gcc/testsuite/gcc.target/i386/stack-check-11.c       | 2 +-
+ gcc/testsuite/gcc.target/i386/stack-check-18.c       | 2 +-
+ gcc/testsuite/gcc.target/i386/stack-check-19.c       | 2 +-
+ gcc/testsuite/gcc.target/i386/stackalign/pr88483-1.c | 2 +-
+ gcc/testsuite/gcc.target/i386/stackalign/pr88483-2.c | 2 +-
+ gcc/testsuite/gcc.target/i386/sw-1.c                 | 2 +-
+ 17 files changed, 17 insertions(+), 16 deletions(-)
+
+diff --git a/gcc/testsuite/gcc.dg/asan/use-after-scope-4.c b/gcc/testsuite/gcc.dg/asan/use-after-scope-4.c
+index 44dc79535d2a..e1486e75045f 100644
+--- a/gcc/testsuite/gcc.dg/asan/use-after-scope-4.c
++++ b/gcc/testsuite/gcc.dg/asan/use-after-scope-4.c
+@@ -1,4 +1,5 @@
+ // { dg-do run }
++/* { dg-options "-fno-stack-protector" } */
+ 
+ #define FN(NAME) \
+ NAME (void) \
+diff --git a/gcc/testsuite/gcc.dg/stack-usage-1.c b/gcc/testsuite/gcc.dg/stack-usage-1.c
+index 93cfe7c01639..1d7d1fee4351 100644
+--- a/gcc/testsuite/gcc.dg/stack-usage-1.c
++++ b/gcc/testsuite/gcc.dg/stack-usage-1.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-fstack-usage" } */
++/* { dg-options "-fstack-usage -fno-stack-protector" } */
+ /* nvptx doesn't have a reg allocator, and hence no stack usage data.  */
+ /* { dg-skip-if "" { nvptx-*-* } } */
+ 
+diff --git a/gcc/testsuite/gcc.dg/superblock.c b/gcc/testsuite/gcc.dg/superblock.c
+index 2b2fa9e154fb..6b4419adaf59 100644
+--- a/gcc/testsuite/gcc.dg/superblock.c
++++ b/gcc/testsuite/gcc.dg/superblock.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -fno-asynchronous-unwind-tables -fsched2-use-superblocks -fdump-rtl-sched2 -fdump-rtl-bbro" } */
++/* { dg-options "-O2 -fno-asynchronous-unwind-tables -fsched2-use-superblocks -fdump-rtl-sched2 -fdump-rtl-bbro -fno-stack-protector" } */
+ /* { dg-require-effective-target scheduling } */
+ 
+ typedef int aligned __attribute__ ((aligned (64)));
+diff --git a/gcc/testsuite/gcc.target/i386/avx-vzeroupper-17.c b/gcc/testsuite/gcc.target/i386/avx-vzeroupper-17.c
+index 6dc0dc053214..d677e6f10e01 100644
+--- a/gcc/testsuite/gcc.target/i386/avx-vzeroupper-17.c
++++ b/gcc/testsuite/gcc.target/i386/avx-vzeroupper-17.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile { target lp64 } } */
+-/* { dg-options "-O2 -mavx -mabi=ms -dp" } */
++/* { dg-options "-O2 -mavx -mabi=ms -dp -fno-stack-protector" } */
+ 
+ typedef float __m256 __attribute__ ((__vector_size__ (32), __may_alias__));
+ 
+diff --git a/gcc/testsuite/gcc.target/i386/cleanup-1.c b/gcc/testsuite/gcc.target/i386/cleanup-1.c
+index dcfcc4edb5fa..6e7544c6b7ac 100644
+--- a/gcc/testsuite/gcc.target/i386/cleanup-1.c
++++ b/gcc/testsuite/gcc.target/i386/cleanup-1.c
+@@ -1,5 +1,5 @@
+ /* { dg-do run { target *-*-linux* *-*-gnu* } } */
+-/* { dg-options "-fexceptions -fnon-call-exceptions -fasynchronous-unwind-tables -O2" } */
++/* { dg-options "-fexceptions -fnon-call-exceptions -fasynchronous-unwind-tables -O2 -fno-stack-protector" } */
+ /* Test complex CFA value expressions.  */
+ 
+ #include <unwind.h>
+diff --git a/gcc/testsuite/gcc.target/i386/cleanup-2.c b/gcc/testsuite/gcc.target/i386/cleanup-2.c
+index 7e60323373b8..a24daba73da2 100644
+--- a/gcc/testsuite/gcc.target/i386/cleanup-2.c
++++ b/gcc/testsuite/gcc.target/i386/cleanup-2.c
+@@ -1,5 +1,5 @@
+ /* { dg-do run { target { *-*-linux* && { ! ia32 } } } } */
+-/* { dg-options "-fexceptions -fnon-call-exceptions -fasynchronous-unwind-tables -O2" } */
++/* { dg-options "-fexceptions -fnon-call-exceptions -fasynchronous-unwind-tables -O2 -fno-stack-protector" } */
+ /* Test complex CFA value expressions.  */
+ 
+ #include <unwind.h>
+diff --git a/gcc/testsuite/gcc.target/i386/interrupt-redzone-1.c b/gcc/testsuite/gcc.target/i386/interrupt-redzone-1.c
+index 10098848c506..0c412db427e3 100644
+--- a/gcc/testsuite/gcc.target/i386/interrupt-redzone-1.c
++++ b/gcc/testsuite/gcc.target/i386/interrupt-redzone-1.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile { target { ! ia32 } } } */
+-/* { dg-options "-O2 -mgeneral-regs-only -mno-cld -mred-zone" } */
++/* { dg-options "-O2 -mgeneral-regs-only -mno-cld -mred-zone -fno-stack-protector" } */
+ 
+ void
+ __attribute__((interrupt))
+diff --git a/gcc/testsuite/gcc.target/i386/interrupt-redzone-2.c b/gcc/testsuite/gcc.target/i386/interrupt-redzone-2.c
+index 2577f43c9168..caea99665f23 100644
+--- a/gcc/testsuite/gcc.target/i386/interrupt-redzone-2.c
++++ b/gcc/testsuite/gcc.target/i386/interrupt-redzone-2.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile { target { ! ia32 } } } */
+-/* { dg-options "-O2 -mgeneral-regs-only -mno-cld -mred-zone" } */
++/* { dg-options "-O2 -mgeneral-regs-only -mno-cld -mred-zone -fno-stack-protector" } */
+ 
+ void
+ __attribute__((interrupt))
+diff --git a/gcc/testsuite/gcc.target/i386/pr79793-1.c b/gcc/testsuite/gcc.target/i386/pr79793-1.c
+index 1cc67a83ba39..102d63afe8d9 100644
+--- a/gcc/testsuite/gcc.target/i386/pr79793-1.c
++++ b/gcc/testsuite/gcc.target/i386/pr79793-1.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile { target { *-*-linux* && { ! ia32 } } } } */
+-/* { dg-options "-O2 -mgeneral-regs-only -mtune=generic" } */
++/* { dg-options "-O2 -mgeneral-regs-only -mtune=generic -fno-stack-protector" } */
+ 
+ void
+  __attribute__ ((interrupt))
+diff --git a/gcc/testsuite/gcc.target/i386/pr79793-2.c b/gcc/testsuite/gcc.target/i386/pr79793-2.c
+index e1e6463e120a..30f22bea9884 100644
+--- a/gcc/testsuite/gcc.target/i386/pr79793-2.c
++++ b/gcc/testsuite/gcc.target/i386/pr79793-2.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile { target { *-*-linux* && { ! ia32 } } } } */
+-/* { dg-options "-O2 -mgeneral-regs-only -mtune=generic" } */
++/* { dg-options "-O2 -mgeneral-regs-only -mtune=generic -fno-stack-protector" } */
+ 
+ typedef unsigned int uword_t __attribute__ ((mode (__word__)));
+ 
+diff --git a/gcc/testsuite/gcc.target/i386/shrink_wrap_1.c b/gcc/testsuite/gcc.target/i386/shrink_wrap_1.c
+index 94dadd6cdbd8..4b286671e90b 100644
+--- a/gcc/testsuite/gcc.target/i386/shrink_wrap_1.c
++++ b/gcc/testsuite/gcc.target/i386/shrink_wrap_1.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile { target { ! ia32 } } } */
+-/* { dg-options "-O2 -fdump-rtl-pro_and_epilogue" } */
++/* { dg-options "-O2 -fdump-rtl-pro_and_epilogue -fno-stack-protector" } */
+ 
+ enum machine_mode
+ {
+diff --git a/gcc/testsuite/gcc.target/i386/stack-check-11.c b/gcc/testsuite/gcc.target/i386/stack-check-11.c
+index 90ab6023b422..48341cedcd4b 100644
+--- a/gcc/testsuite/gcc.target/i386/stack-check-11.c
++++ b/gcc/testsuite/gcc.target/i386/stack-check-11.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -fstack-clash-protection -mtune=generic" } */
++/* { dg-options "-O2 -fstack-clash-protection -mtune=generic -fno-stack-protector" } */
+ /* { dg-require-effective-target supports_stack_clash_protection } */
+ 
+ #include <stdint.h>
+diff --git a/gcc/testsuite/gcc.target/i386/stack-check-18.c b/gcc/testsuite/gcc.target/i386/stack-check-18.c
+index 1cf4bbcfafb5..a0aab4a98238 100644
+--- a/gcc/testsuite/gcc.target/i386/stack-check-18.c
++++ b/gcc/testsuite/gcc.target/i386/stack-check-18.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -fstack-clash-protection -mtune=generic -fdump-rtl-expand" } */
++/* { dg-options "-O2 -fstack-clash-protection -mtune=generic -fdump-rtl-expand -fno-stack-protector" } */
+ /* { dg-require-effective-target supports_stack_clash_protection } */
+ /* { dg-skip-if "" { *-*-* } { "-fstack-protector*" } { "" } } */
+ 
+diff --git a/gcc/testsuite/gcc.target/i386/stack-check-19.c b/gcc/testsuite/gcc.target/i386/stack-check-19.c
+index bf6af5ffc3e9..94c75dcb47ce 100644
+--- a/gcc/testsuite/gcc.target/i386/stack-check-19.c
++++ b/gcc/testsuite/gcc.target/i386/stack-check-19.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -fstack-clash-protection -mtune=generic -fdump-rtl-expand" } */
++/* { dg-options "-O2 -fstack-clash-protection -mtune=generic -fdump-rtl-expand -fno-stack-protector" } */
+ /* { dg-require-effective-target supports_stack_clash_protection } */
+ /* { dg-skip-if "" { *-*-* } { "-fstack-protector*" } { "" } } */
+ 
+diff --git a/gcc/testsuite/gcc.target/i386/stackalign/pr88483-1.c b/gcc/testsuite/gcc.target/i386/stackalign/pr88483-1.c
+index c8bb0832fe26..11ecdd52aa15 100644
+--- a/gcc/testsuite/gcc.target/i386/stackalign/pr88483-1.c
++++ b/gcc/testsuite/gcc.target/i386/stackalign/pr88483-1.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -mavx2" } */
++/* { dg-options "-O2 -mavx2 -fno-stack-protector" } */
+ 
+ struct B
+ {
+diff --git a/gcc/testsuite/gcc.target/i386/stackalign/pr88483-2.c b/gcc/testsuite/gcc.target/i386/stackalign/pr88483-2.c
+index e94fa1d18fad..33174fa29dec 100644
+--- a/gcc/testsuite/gcc.target/i386/stackalign/pr88483-2.c
++++ b/gcc/testsuite/gcc.target/i386/stackalign/pr88483-2.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -mavx512f" } */
++/* { dg-options "-O2 -mavx512f -fno-stack-protector" } */
+ 
+ struct B
+ {
+diff --git a/gcc/testsuite/gcc.target/i386/sw-1.c b/gcc/testsuite/gcc.target/i386/sw-1.c
+index a9c89fca4ec4..b0432279644a 100644
+--- a/gcc/testsuite/gcc.target/i386/sw-1.c
++++ b/gcc/testsuite/gcc.target/i386/sw-1.c
+@@ -1,4 +1,4 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -mtune=generic -fshrink-wrap -fdump-rtl-pro_and_epilogue" } */
++/* { dg-options "-O2 -mtune=generic -fshrink-wrap -fdump-rtl-pro_and_epilogue -fno-stack-protector" } */
+ /* { dg-skip-if "No shrink-wrapping preformed" { x86_64-*-mingw* } } */
+ 
+-- 
+cgit 
+

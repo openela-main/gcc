@@ -5,7 +5,7 @@
 %global gcc_major 11
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 11
+%global gcc_release 14
 %global nvptx_tools_gitrev 5f6f343a302d620b0868edab376c00b15741e39e
 %global newlib_cygwin_gitrev 50e2a63b04bdd018484605fbb954fd1bd5147fa0
 %global _unpackaged_files_terminate_build 0
@@ -124,8 +124,7 @@
 %dnl rhel != 9
 %global build_cross 0
 %endif
-# TODO: Add ppc64le-redhat-linux s390x-redhat-linux later.
-%global cross_targets aarch64-redhat-linux
+%global cross_targets aarch64-redhat-linux ppc64le-redhat-linux s390x-redhat-linux
 Summary:              Various compilers (C, C++, Objective-C, ...)
 Name:                 gcc
 Version:              %{gcc_version}
@@ -348,6 +347,11 @@ Patch109:             gcc11-fortran-fdec-add-missing-indexes.patch
 Patch1000:            gcc11-libstdc++-prettyprinter-update-15.patch
 Patch1001:            gcc11-libstdc++-prettyprinter-update-15-tests.patch
 Patch1002:            gcc11-libstdc++-prettyprinter-update-15-tests-48362.patch
+
+# Backports
+Patch2000:            gcc11-fix-failures-with-default-SSP.patch
+Patch2001:            gcc11-disable-stack-protector-for-tests-relying-on-stack-offset.patch
+Patch2002:            gcc11-gcov-show-branches-and-calls.patch
 
 # On ARM EABI systems, we do want -gnueabi to be part of the
 # target triple.
@@ -899,6 +903,84 @@ production use, and output binary artifacts should not be used in
 production.  Generated binary artifacts contain binary annotations that
 mark them as cross compiled.
 
+%package -n cross-gcc-ppc64le
+Summary:              Cross targeted PPC64le gcc for developer use.  Not intended for production.
+Provides:             cross-gcc-ppc64le = %{version}-%{release}
+%if %{build_cross}
+Requires:             cross-binutils-ppc64le >= 2.35
+BuildRequires:        sysroot-ppc64le-el9-glibc >= 2.34
+BuildRequires:        cross-binutils-ppc64le >= 2.35
+%endif
+# Don't provide e.g. liblto_plugin.so()(64bit).
+AutoReqProv:          no
+
+%description -n cross-gcc-ppc64le
+This package contains a version of gcc that can compile code for PPC64le
+(cross compiler).  This cross compiler is intended for developers to use
+during application development.  This cross compiler is not intended for
+production use, and output binary artifacts should not be used in
+production.  Generated binary artifacts contain binary annotations that
+mark them as cross compiled.
+
+%package -n cross-gcc-c++-ppc64le
+Summary:              Cross targeted PPC64le gcc-c++ for developer use.  Not intended for production.
+Provides:             cross-gcc-c++-ppc64le = %{version}-%{release}
+%if %{build_cross}
+Requires:             cross-gcc-ppc64le = %{version}-%{release}
+BuildRequires:        sysroot-ppc64le-el9-glibc >= 2.34
+BuildRequires:        cross-binutils-ppc64le >= 2.35
+%endif
+# ??? Otherwise this subpackage couldn't be installed, depends on libm.so
+# and libgcc_s.so
+AutoReqProv:          no
+
+%description -n cross-gcc-c++-ppc64le
+This package contains a version of g++ that can compile code for PPC64le
+(cross compiler).  This cross compiler is intended for developers to use
+during application development.  This cross compiler is not intended for
+production use, and output binary artifacts should not be used in
+production.  Generated binary artifacts contain binary annotations that
+mark them as cross compiled.
+
+%package -n cross-gcc-s390x
+Summary:              Cross targeted S/390 gcc for developer use.  Not intended for production.
+Provides:             cross-gcc-s390x = %{version}-%{release}
+%if %{build_cross}
+Requires:             cross-binutils-s390x >= 2.35
+BuildRequires:        sysroot-s390x-el9-glibc >= 2.34
+BuildRequires:        cross-binutils-s390x >= 2.35
+%endif
+# Don't provide e.g. liblto_plugin.so()(64bit).
+AutoReqProv:          no
+
+%description -n cross-gcc-s390x
+This package contains a version of gcc that can compile code for S/390
+(cross compiler).  This cross compiler is intended for developers to use
+during application development.  This cross compiler is not intended for
+production use, and output binary artifacts should not be used in
+production.  Generated binary artifacts contain binary annotations that
+mark them as cross compiled.
+
+%package -n cross-gcc-c++-s390x
+Summary:              Cross targeted S/390 gcc-c++ for developer use.  Not intended for production.
+Provides:             cross-gcc-c++-s390x = %{version}-%{release}
+%if %{build_cross}
+Requires:             cross-gcc-s390x = %{version}-%{release}
+BuildRequires:        sysroot-s390x-el9-glibc >= 2.34
+BuildRequires:        cross-binutils-s390x >= 2.35
+%endif
+# ??? Otherwise this subpackage couldn't be installed, depends on libm.so
+# and libgcc_s.so
+AutoReqProv:          no
+
+%description -n cross-gcc-c++-s390x
+This package contains a version of g++ that can compile code for S/390
+(cross compiler).  This cross compiler is intended for developers to use
+during application development.  This cross compiler is not intended for
+production use, and output binary artifacts should not be used in
+production.  Generated binary artifacts contain binary annotations that
+mark them as cross compiled.
+
 %prep
 %setup -q -n gcc-%{version}-%{DATE} -a 1 -a 2 -a 3
 %patch0 -p0 -b .hack~
@@ -989,6 +1071,10 @@ mark them as cross compiled.
 %patch1000 -p1 -b .libstdc++-prettyprinter-update-15
 %patch1001 -p1 -b .libstdc++-prettyprinter-update-15-tests
 %patch1002 -p1 -b .libstdc++-prettyprinter-update-15-tests-48362
+
+%patch2000 -p1 -b .fix-failures-with-default-SSP
+%patch2001 -p1 -b .disable-stack-protector-for-tests-relying-on-stack-offset
+%patch2002 -p1 -b .gcov-show-branches-and-calls
 
 %ifarch %{arm}
 rm -f gcc/testsuite/go.test/test/fixedbugs/issue19182.go
@@ -1359,10 +1445,10 @@ for crossarch in %{cross_targets}; do
       CONFIGURE_OPTS_FOR_ARCH=""
       ;;
     s390x*)
-      CONFIGURE_OPTS_FOR_ARCH=""
+      CONFIGURE_OPTS_FOR_ARCH="--with-arch=z14 --with-tune=z15"
       ;;
     ppc64le*)
-      CONFIGURE_OPTS_FOR_ARCH=""
+      CONFIGURE_OPTS_FOR_ARCH="--with-cpu-32=power9 --with-tune-32=power9 --with-cpu-64=power9 --with-tune-64=power9"
       ;;
     *)
       echo >&2 "ERROR: unknown cross arch $crossarch"
@@ -1661,21 +1747,37 @@ for crossarch in %{cross_targets}; do
   mv include-fixed/limits.h include/limits.h
   popd
 
-  echo '/* GNU ld script
+  case $crossarch in
+    aarch64*)
+      OUTPUT_FORMAT_FOR_ARCH="elf64-littleaarch64"
+      ;;
+    s390x*)
+      OUTPUT_FORMAT_FOR_ARCH="elf64-s390"
+      ;;
+    ppc64le*)
+      OUTPUT_FORMAT_FOR_ARCH="elf64-powerpcle"
+      ;;
+    *)
+      echo >&2 "ERROR: unknown cross arch $crossarch"
+      exit 1
+      ;;
+  esac
+
+  echo "/* GNU ld script
    Use the shared library, but some functions are only in
    the static library.  */
-OUTPUT_FORMAT(elf64-littleaarch64)
-GROUP ( =/lib64/libgcc_s.so.1 libgcc.a )' > $CROSS_LIBPATH/libgcc_s.so
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+GROUP ( =/lib64/libgcc_s.so.1 libgcc.a )" > $CROSS_LIBPATH/libgcc_s.so
 
-  echo '/* GNU ld script
+  echo "/* GNU ld script
    Use the shared library from sysroot.  */
-OUTPUT_FORMAT(elf64-littleaarch64)
-INPUT ( =%{_prefix}/lib64/libgomp.so.1 )' > $CROSS_LIBPATH/libgomp.so
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =%{_prefix}/lib64/libgomp.so.1 )" > $CROSS_LIBPATH/libgomp.so
 
-  echo '/* GNU ld script
+  echo "/* GNU ld script
    Use the shared library from sysroot.  */
-OUTPUT_FORMAT(elf64-littleaarch64)
-INPUT ( =/%{_prefix}/lib64/libstdc++.so.6 )' > $CROSS_LIBPATH/libstdc++.so
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =/%{_prefix}/lib64/libstdc++.so.6 )" > $CROSS_LIBPATH/libstdc++.so
 
   echo "/* GNU ld script
    Use the static library from sysroot.  */
@@ -1685,19 +1787,19 @@ INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libstdc++.a )" > $CROSS_LIBPA
    Use the static library from sysroot.  */
 INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libsupc++.a )" > $CROSS_LIBPATH/libsupc++.a
 
-  echo '/* GNU ld script
+  echo "/* GNU ld script
    Use the shared library from sysroot.  */
-OUTPUT_FORMAT(elf64-littleaarch64)
-INPUT ( =%{_prefix}/lib64/libatomic.so.1 )' > $CROSS_LIBPATH/libatomic.so
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =%{_prefix}/lib64/libatomic.so.1 )" > $CROSS_LIBPATH/libatomic.so
 
   echo "/* GNU ld script
    Use the static library from sysroot.  */
 INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libatomic.a )" > $CROSS_LIBPATH/libatomic.a
 
-  echo '/* GNU ld script
+  echo "/* GNU ld script
    Use the shared library from sysroot.  */
-OUTPUT_FORMAT(elf64-littleaarch64)
-INPUT ( =%{_prefix}/lib64/libitm.so.1 )' > $CROSS_LIBPATH/libitm.so
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =%{_prefix}/lib64/libitm.so.1 )" > $CROSS_LIBPATH/libitm.so
 
   echo "/* GNU ld script
    Use the static library from sysroot.  */
@@ -3668,10 +3770,119 @@ end
 %{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libstdc++.so
 %{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libstdc++.a
 %{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libsupc++.a
+
+%files -n cross-gcc-ppc64le
+%{_prefix}/bin/ppc64le-redhat-linux-cpp
+%{_prefix}/bin/ppc64le-redhat-linux-gcc
+%{_prefix}/bin/ppc64le-redhat-linux-gcc-%{gcc_major}
+%{_prefix}/bin/ppc64le-redhat-linux-gcc-ar
+%{_prefix}/bin/ppc64le-redhat-linux-gcc-nm
+%{_prefix}/bin/ppc64le-redhat-linux-gcc-ranlib
+%{_prefix}/bin/ppc64le-redhat-linux-gcov*
+%{_prefix}/bin/ppc64le-redhat-linux-lto-dump
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/cc1
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/collect2
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/lto1
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/lto-wrapper
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/liblto_plugin.so
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/ppc64le-redhat-linux
+%dir %{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}
+%dir %{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/include
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/crt*.o
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libgcc.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libgcc_eh.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libgcov.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/include/*.h
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/rpmver
+# These are here for ld(1) purposes only.
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libgcc_s.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libgomp.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libgomp.spec
+%if %{build_libatomic}
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libatomic.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libatomic.a
+%endif
+%if %{build_libitm}
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libitm.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libitm.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libitm.spec
+%endif
+
+%files -n cross-gcc-c++-ppc64le
+%{_prefix}/bin/ppc64le-redhat-linux-c++
+%{_prefix}/bin/ppc64le-redhat-linux-g++
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/cc1plus
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/g++-mapper-server
+# For ld(1) purposes only.
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libstdc++.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libstdc++.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libsupc++.a
+
+%files -n cross-gcc-s390x
+%{_prefix}/bin/s390x-redhat-linux-cpp
+%{_prefix}/bin/s390x-redhat-linux-gcc
+%{_prefix}/bin/s390x-redhat-linux-gcc-%{gcc_major}
+%{_prefix}/bin/s390x-redhat-linux-gcc-ar
+%{_prefix}/bin/s390x-redhat-linux-gcc-nm
+%{_prefix}/bin/s390x-redhat-linux-gcc-ranlib
+%{_prefix}/bin/s390x-redhat-linux-gcov*
+%{_prefix}/bin/s390x-redhat-linux-lto-dump
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/cc1
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/collect2
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/lto1
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/lto-wrapper
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/liblto_plugin.so
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/s390x-redhat-linux
+%dir %{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}
+%dir %{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/include
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/crt*.o
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libgcc.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libgcc_eh.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libgcov.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/include/*.h
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/rpmver
+# These are here for ld(1) purposes only.
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libgcc_s.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libgomp.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libgomp.spec
+%if %{build_libatomic}
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libatomic.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libatomic.a
+%endif
+%if %{build_libitm}
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libitm.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libitm.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libitm.spec
+%endif
+
+%files -n cross-gcc-c++-s390x
+%{_prefix}/bin/s390x-redhat-linux-c++
+%{_prefix}/bin/s390x-redhat-linux-g++
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/cc1plus
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/g++-mapper-server
+# For ld(1) purposes only.
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libstdc++.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libstdc++.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libsupc++.a
+
 %dnl build_cross
 %endif
 
 %changelog
+* Thu Oct 30 2025 David Malcolm <dmalcolm@redhat.com> - 11.5.0-14
+- Add backport of upstream r15-8946-g580664d1b66a5d to gcc 11, adding
+  branches and calls to gcov output, but not conditions (RHEL-105416).
+
+* Tue Oct 14 2025 David Malcolm <dmalcolm@redhat.com> - 11.5.0-13
+- Fix testsuite failures when run with -fstack-protector* (PR testsuite/70230,
+  RHEL-116477)
+
+* Wed Sep 10 2025 Joseph Myers <josmyers@redhat.com> - 11.5.0-12
+- Add cross compilers for ppc64le and s390x for non-production uses
+  (RHEL-94764)
+
 * Thu Jul 31 2025 Florian Weimer  <fweimer@redhat.com> - 11.5.0-11
 - Adjust glibc32 build dependency (RHEL-105072)
 
