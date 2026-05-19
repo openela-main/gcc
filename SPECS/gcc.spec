@@ -1,10 +1,10 @@
-%global DATE 20250617
-%global gitrev 74a421064f3d0de5d604bc051d9c21c1b9763064
+%global DATE 20251022
+%global gitrev 7cb09bad6a2ef6c95cdcb57821f7f01f477c5437
 %global gcc_version 14.3.1
 %global gcc_major 14
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 2
+%global gcc_release 4
 %global nvptx_tools_gitrev 87ce9dc5999e5fca2e1d3478a30888d9864c9804
 %global newlib_cygwin_gitrev d45261f62a15f8abd94a1031020b9a9f455e4eed
 %global _unpackaged_files_terminate_build 0
@@ -140,10 +140,33 @@
 %else
 %global build_annobin_plugin 0
 %endif
+%if 0%{?rhel} == 10
+%ifarch x86_64
+%global build_cross 1
+%else
+%global build_cross 0
+%endif
+%else
+%dnl rhel != 10
+%global build_cross 0
+%endif
+%global cross_targets aarch64-redhat-linux ppc64le-redhat-linux s390x-redhat-linux
+# sysroot package support (taken from that for glibc).  These contain
+# arch-specific packages, so turn off the rpmbuild check.
+%global _binaries_in_noarch_packages_terminate_build 0
+# Variant of %%dist that contains just the distribution release, no affixes.
+%{?fedora:%global sysroot_dist fc%{fedora}}
+%{?rhel:%global sysroot_dist el%{rhel}}
+%{?!sysroot_dist:%global sysroot_dist root}
+# The name of the sysroot package (suffixed with a library name).
+%global sysroot_package_arch sysroot-%{_arch}-%{sysroot_dist}
+# Installed path for the sysroot tree.  Must contain /sys-root/, which
+# triggers filtering.
+%global sysroot_prefix /usr/%{_arch}-redhat-linux/sys-root/%{sysroot_dist}
 Summary: Various compilers (C, C++, Objective-C, ...)
 Name: gcc
 Version: %{gcc_version}
-Release: %{gcc_release}.1%{?dist}
+Release: %{gcc_release}.4%{?dist}
 # License notes for some of the less obvious ones:
 #   gcc/doc/cppinternals.texi: Linux-man-pages-copyleft-2-para
 #   isl: MIT, BSD-2-Clause
@@ -313,6 +336,23 @@ Patch100: gcc14-fortran-fdec-duplicates.patch
 # Pretty printer updates for GTS
 Patch1000: gcc14-libstdc++-prettyprinter-update-15.patch
 Patch1001: gcc14-libstdc++-prettyprinter-update-15-tests.patch
+
+# Backports
+Patch2000: gcc14-gcov-function-summaries.patch
+
+# Improvements for installed / cross testing and results comparison
+Patch3000: gcc14-tests-dg-regexp.patch
+Patch3001: gcc14-tests-installed-site-exp.patch
+Patch3002: gcc14-tests-installed-target.patch
+Patch3003: gcc14-tests-installed-plugin.patch
+Patch3004: gcc14-tests-ssp-native.patch
+Patch3005: gcc14-tests-guality-native.patch
+Patch3006: gcc14-tests-simulate-thread-native.patch
+Patch3007: gcc14-tests-gcov-native.patch
+Patch3008: gcc14-tests-misc-native.patch
+Patch3009: gcc14-tests-tree-prof-native.patch
+Patch3010: gcc14-tests-color.patch
+Patch3011: gcc14-tests-env-native.patch
 
 # On ARM EABI systems, we do want -gnueabi to be part of the
 # target triple.
@@ -890,6 +930,249 @@ This package adds a version of the annobin plugin for gcc.  This version
 of the plugin is explicitly built by the same version of gcc that is installed
 so that there cannot be any synchronization problems.
 
+%package -n cross-gcc-aarch64
+Summary: Cross targeted AArch64 gcc for developer use.  Not intended for production.
+Provides: cross-gcc-aarch64 = %{version}-%{release}
+%if %{build_cross}
+Requires: cross-binutils-aarch64 >= 2.41
+BuildRequires: sysroot-aarch64-el10-glibc >= 2.39
+BuildRequires: cross-binutils-aarch64 >= 2.41
+%endif
+# Don't provide e.g. liblto_plugin.so()(64bit).
+AutoReqProv: no
+
+%description -n cross-gcc-aarch64
+This package contains a version of gcc that can compile code for AArch64
+(cross compiler).  This cross compiler is intended for developers to use
+during application development.  This cross compiler is not intended for
+production use, and output binary artifacts should not be used in
+production.  Generated binary artifacts contain binary annotations that
+mark them as cross compiled.
+
+%package -n cross-gcc-c++-aarch64
+Summary: Cross targeted AArch64 gcc-c++ for developer use.  Not intended for production.
+Provides: cross-gcc-c++-aarch64 = %{version}-%{release}
+%if %{build_cross}
+Requires: cross-gcc-aarch64 = %{version}-%{release}
+BuildRequires: sysroot-aarch64-el10-glibc >= 2.39
+BuildRequires: cross-binutils-aarch64 >= 2.41
+%endif
+# ??? Otherwise this subpackage couldn't be installed, depends on libm.so
+# and libgcc_s.so
+AutoReqProv: no
+
+%description -n cross-gcc-c++-aarch64
+This package contains a version of g++ that can compile code for AArch64
+(cross compiler).  This cross compiler is intended for developers to use
+during application development.  This cross compiler is not intended for
+production use, and output binary artifacts should not be used in
+production.  Generated binary artifacts contain binary annotations that
+mark them as cross compiled.
+
+%package -n cross-gcc-plugin-aarch64
+Summary: Plugin headers for cross targeted AArch64 gcc for developer use.  Not intended for production.
+Provides: cross-gcc-plugin-aarch64 = %{version}-%{release}
+%if %{build_cross}
+Requires: cross-gcc-aarch64 = %{version}-%{release}
+BuildRequires: sysroot-aarch64-el10-glibc >= 2.39
+BuildRequires: cross-binutils-aarch64 >= 2.41
+%endif
+AutoReqProv: no
+
+%description -n cross-gcc-plugin-aarch64
+This package contains header files and other support files for compiling GCC
+plugins for use with the non-production AArch64 cross compiler.
+
+%package -n cross-gcc-ppc64le
+Summary: Cross targeted PPC64le gcc for developer use.  Not intended for production.
+Provides: cross-gcc-ppc64le = %{version}-%{release}
+%if %{build_cross}
+Requires: cross-binutils-ppc64le >= 2.41
+BuildRequires: sysroot-ppc64le-el10-glibc >= 2.39
+BuildRequires: cross-binutils-ppc64le >= 2.41
+%endif
+# Don't provide e.g. liblto_plugin.so()(64bit).
+AutoReqProv: no
+
+%description -n cross-gcc-ppc64le
+This package contains a version of gcc that can compile code for PPC64le
+(cross compiler).  This cross compiler is intended for developers to use
+during application development.  This cross compiler is not intended for
+production use, and output binary artifacts should not be used in
+production.  Generated binary artifacts contain binary annotations that
+mark them as cross compiled.
+
+%package -n cross-gcc-c++-ppc64le
+Summary: Cross targeted PPC64le gcc-c++ for developer use.  Not intended for production.
+Provides: cross-gcc-c++-ppc64le = %{version}-%{release}
+%if %{build_cross}
+Requires: cross-gcc-ppc64le = %{version}-%{release}
+BuildRequires: sysroot-ppc64le-el10-glibc >= 2.39
+BuildRequires: cross-binutils-ppc64le >= 2.41
+%endif
+# ??? Otherwise this subpackage couldn't be installed, depends on libm.so
+# and libgcc_s.so
+AutoReqProv: no
+
+%description -n cross-gcc-c++-ppc64le
+This package contains a version of g++ that can compile code for PPC64le
+(cross compiler).  This cross compiler is intended for developers to use
+during application development.  This cross compiler is not intended for
+production use, and output binary artifacts should not be used in
+production.  Generated binary artifacts contain binary annotations that
+mark them as cross compiled.
+
+%package -n cross-gcc-plugin-ppc64le
+Summary: Plugin headers for cross targeted PPC64le gcc for developer use.  Not intended for production.
+Provides: cross-gcc-plugin-ppc64le = %{version}-%{release}
+%if %{build_cross}
+Requires: cross-gcc-ppc64le = %{version}-%{release}
+BuildRequires: sysroot-ppc64le-el10-glibc >= 2.39
+BuildRequires: cross-binutils-ppc64le >= 2.41
+%endif
+AutoReqProv: no
+
+%description -n cross-gcc-plugin-ppc64le
+This package contains header files and other support files for compiling GCC
+plugins for use with the non-production PPC64le cross compiler.
+
+%package -n cross-gcc-s390x
+Summary: Cross targeted S/390 gcc for developer use.  Not intended for production.
+Provides: cross-gcc-s390x = %{version}-%{release}
+%if %{build_cross}
+Requires: cross-binutils-s390x >= 2.41
+BuildRequires: sysroot-s390x-el10-glibc >= 2.39
+BuildRequires: cross-binutils-s390x >= 2.41
+%endif
+# Don't provide e.g. liblto_plugin.so()(64bit).
+AutoReqProv: no
+
+%description -n cross-gcc-s390x
+This package contains a version of gcc that can compile code for S/390
+(cross compiler).  This cross compiler is intended for developers to use
+during application development.  This cross compiler is not intended for
+production use, and output binary artifacts should not be used in
+production.  Generated binary artifacts contain binary annotations that
+mark them as cross compiled.
+
+%package -n cross-gcc-c++-s390x
+Summary: Cross targeted S/390 gcc-c++ for developer use.  Not intended for production.
+Provides: cross-gcc-c++-s390x = %{version}-%{release}
+%if %{build_cross}
+Requires: cross-gcc-s390x = %{version}-%{release}
+BuildRequires: sysroot-s390x-el10-glibc >= 2.39
+BuildRequires: cross-binutils-s390x >= 2.41
+%endif
+# ??? Otherwise this subpackage couldn't be installed, depends on libm.so
+# and libgcc_s.so
+AutoReqProv: no
+
+%description -n cross-gcc-c++-s390x
+This package contains a version of g++ that can compile code for S/390
+(cross compiler).  This cross compiler is intended for developers to use
+during application development.  This cross compiler is not intended for
+production use, and output binary artifacts should not be used in
+production.  Generated binary artifacts contain binary annotations that
+mark them as cross compiled.
+
+%package -n cross-gcc-plugin-s390x
+Summary: Plugin headers for cross targeted S/390 gcc for developer use.  Not intended for production.
+Provides: cross-gcc-plugin-s390x = %{version}-%{release}
+%if %{build_cross}
+Requires: cross-gcc-s390x = %{version}-%{release}
+BuildRequires: sysroot-s390x-el10-glibc >= 2.39
+BuildRequires: cross-binutils-s390x >= 2.41
+%endif
+AutoReqProv: no
+
+%description -n cross-gcc-plugin-s390x
+This package contains header files and other support files for compiling GCC
+plugins for use with the non-production S/390 cross compiler.
+
+%package -n %{sysroot_package_arch}-libgcc
+Summary: Sysroot package for libgcc, %{_arch} architecture
+BuildArch: noarch
+Provides: sysroot-%{_arch}-libgcc
+# The files are not usable for execution, so do not provide nor
+# require anything.
+AutoReqProv: no
+
+%description -n %{sysroot_package_arch}-libgcc
+This package contains development files for the libgcc package
+that can be installed across architectures.
+
+%package -n %{sysroot_package_arch}-libgomp
+Summary: Sysroot package for libgomp, %{_arch} architecture
+BuildArch: noarch
+Provides: sysroot-%{_arch}-libgomp
+# The files are not usable for execution, so do not provide nor
+# require anything.
+AutoReqProv: no
+
+%description -n %{sysroot_package_arch}-libgomp
+This package contains development files for the libgomp package
+that can be installed across architectures.
+
+%package -n %{sysroot_package_arch}-libstdc++
+Summary: Sysroot package for libstdc++, %{_arch} architecture
+BuildArch: noarch
+Provides: sysroot-%{_arch}-libstdc++
+# The files are not usable for execution, so do not provide nor
+# require anything.
+AutoReqProv: no
+
+%description -n %{sysroot_package_arch}-libstdc++
+This package contains development files for the libstdc++ package
+that can be installed across architectures.
+
+%package -n %{sysroot_package_arch}-libatomic
+Summary: Sysroot package for libatomic, %{_arch} architecture
+BuildArch: noarch
+Provides: sysroot-%{_arch}-libatomic
+# The files are not usable for execution, so do not provide nor
+# require anything.
+AutoReqProv: no
+
+%description -n %{sysroot_package_arch}-libatomic
+This package contains development files for the libatomic package
+that can be installed across architectures.
+
+%package -n %{sysroot_package_arch}-libitm
+Summary: Sysroot package for libitm, %{_arch} architecture
+BuildArch: noarch
+Provides: sysroot-%{_arch}-libitm
+# The files are not usable for execution, so do not provide nor
+# require anything.
+AutoReqProv: no
+
+%description -n %{sysroot_package_arch}-libitm
+This package contains development files for the libitm package
+that can be installed across architectures.
+
+%package -n %{sysroot_package_arch}-libsanitizer
+Summary: Sysroot package for sanitizer libraries, %{_arch} architecture
+BuildArch: noarch
+Provides: sysroot-%{_arch}-libsanitizer
+# The files are not usable for execution, so do not provide nor
+# require anything.
+AutoReqProv: no
+
+%description -n %{sysroot_package_arch}-libsanitizer
+This package contains development files for the sanitizer library packages
+that can be installed across architectures.
+
+%package -n %{sysroot_package_arch}-test-support
+Summary: GCC testsuite support files, %{_arch} architecture
+BuildArch: noarch
+Provides: sysroot-%{_arch}-test-support
+# The files are not usable for execution, so do not provide nor
+# require anything.
+AutoReqProv: no
+
+%description -n %{sysroot_package_arch}-test-support
+This package contains files from the GCC build to support running the GCC
+testsuites that can be installed across architectures.
+
 %prep
 %setup -q -n gcc-%{version}-%{DATE} -a 1 -a 2 -a 3
 %patch -P0 -p0 -b .hack~
@@ -921,13 +1204,30 @@ touch -r isl-0.24/m4/ax_prog_cxx_for_build.m4 isl-0.24/m4/ax_prog_cc_for_build.m
 %patch -P1000 -p1 -b .libstdc++-prettyprinter-update-15
 %patch -P1001 -p1 -b .libstdc++-prettyprinter-update-15-tests
 
+%patch -P2000 -p1 -b .gcov-function-summaries
+
+%patch -P3000 -p1 -b .gcc14-tests-dg-regexp
+%patch -P3001 -p1 -b .gcc14-tests-installed-site-exp
+%patch -P3002 -p1 -b .gcc14-tests-installed-target
+%patch -P3003 -p1 -b .gcc14-tests-installed-plugin
+%patch -P3004 -p1 -b .gcc14-tests-ssp-native
+%patch -P3005 -p1 -b .gcc14-tests-guality-native
+%patch -P3006 -p1 -b .gcc14-tests-simulate-thread-native
+%patch -P3007 -p1 -b .gcc14-tests-gcov-native
+%patch -P3008 -p1 -b .gcc14-tests-misc-native
+%patch -P3009 -p1 -b .gcc14-tests-tree-prof-native
+%patch -P3010 -p1 -b .gcc14-tests-color
+%patch -P3011 -p1 -b .gcc14-tests-env-native
+
 %ifarch %{arm}
 rm -f gcc/testsuite/go.test/test/fixedbugs/issue19182.go
 %endif
 rm -f libphobos/testsuite/libphobos.gc/forkgc2.d
 #rm -rf libphobos/testsuite/libphobos.gc
 
-echo 'Red Hat %{version}-%{gcc_release}' > gcc/DEV-PHASE
+echo 'Red Hat %{version}-%{gcc_release}' > gcc/DEV-PHASE.native
+echo 'Red Hat %{version}-%{gcc_release} cross from %{_arch}' > gcc/DEV-PHASE.cross
+cp -p gcc/DEV-PHASE{.native,}
 
 cp -a libstdc++-v3/config/cpu/i{4,3}86/atomicity.h
 
@@ -1119,10 +1419,40 @@ offloadtgts=nvptx-none
 %if %{build_offload_amdgcn}
 offloadtgts=${offloadtgts:+${offloadtgts},}amdgcn-amdhsa
 %endif
-CONFIGURE_OPTS="\
+# CONFIGURE_OPTS_BASE are the configure options common to the native and cross
+# builds.  E.g., --prefix.  This cannot include arch-specific configure options.
+# CONFIGURE_OPTS_NATIVE are the configure options used for the native build
+# (that is, the regular non-cross build) and libgccjit.  This includes arch-specific
+# configure options (default -march and such).
+# CONFIGURE_OPTS = CONFIGURE_OPTS_BASE + CONFIGURE_OPTS_NATIVE
+# CONFIGURE_OPTS_CROSS are the configure options common to all the cross
+# builds.  E.g., only build C/C++.  This shall not be used for the native build.
+# Each cross compiler's configure options will be:
+# CONFIGURE_OPTS_BASE + CONFIGURE_OPTS_CROSS + --target= + --with-sysroot= + <arch-specific-opts>
+# It it very important that the arch-specific configure options used in
+# CONFIGURE_OPTS_NATIVE are in lockstep with the <arch-specific-opts>
+# used in the cross builds.
+CONFIGURE_OPTS_BASE="\
 	--prefix=%{_prefix} --mandir=%{_mandir} --infodir=%{_infodir} \
 	--with-bugurl=http://bugzilla.redhat.com/bugzilla \
 	--enable-shared --enable-threads=posix --enable-checking=release \
+	--with-system-zlib --enable-__cxa_atexit --disable-libunwind-exceptions \
+	--enable-gnu-unique-object --enable-linker-build-id --with-gcc-major-version-only \
+	--enable-plugin --enable-initfini-array \
+	--enable-libstdcxx-backtrace --with-libstdcxx-zoneinfo=%{_datadir}/zoneinfo \
+%if %{build_isl}
+	--with-isl=`pwd`/isl-install \
+%else
+	--without-isl \
+%endif
+%if 0%{?rhel:1}
+	--enable-host-pie --enable-host-bind-now \
+%endif
+	"
+
+# NB: When updating CONFIGURE_OPTS_NATIVE, make sure to update the cross
+# compiler options as well (look for CONFIGURE_OPTS_FOR_ARCH).
+CONFIGURE_OPTS_NATIVE="\
 %ifarch ppc64le
 	--enable-targets=powerpcle-linux \
 %endif
@@ -1139,17 +1469,8 @@ CONFIGURE_OPTS="\
 %else
 	--enable-multilib \
 %endif
-	--with-system-zlib --enable-__cxa_atexit --disable-libunwind-exceptions \
-	--enable-gnu-unique-object --enable-linker-build-id --with-gcc-major-version-only \
-	--enable-libstdcxx-backtrace --with-libstdcxx-zoneinfo=%{_datadir}/zoneinfo \
 %ifnarch %{mips}
 	--with-linker-hash-style=gnu \
-%endif
-	--enable-plugin --enable-initfini-array \
-%if %{build_isl}
-	--with-isl=`pwd`/isl-install \
-%else
-	--without-isl \
 %endif
 %if %{build_offload_nvptx} || %{build_offload_amdgcn}
 	--enable-offload-targets=$offloadtgts --enable-offload-defaulted \
@@ -1282,9 +1603,13 @@ CONFIGURE_OPTS="\
 	--with-build-config=bootstrap-lto --enable-link-serialization=1 \
 %endif
 %endif
-%if 0%{?rhel:1}
-	--enable-host-pie --enable-host-bind-now \
-%endif
+	"
+CONFIGURE_OPTS="$CONFIGURE_OPTS_BASE $CONFIGURE_OPTS_NATIVE"
+
+CONFIGURE_OPTS_CROSS="\
+	--enable-languages=c,c++ --disable-bootstrap \
+	--host=%{gcc_target_platform} --build=%{gcc_target_platform} \
+	--disable-multilib --disable-libstdcxx-pch --disable-libcc1 \
 	"
 
 CC="$CC" CXX="$CXX" CFLAGS="$OPT_FLAGS" \
@@ -1325,6 +1650,55 @@ rm Makefile.orig
 make jit.sphinx.html
 make jit.sphinx.install-html jit_htmldir=`pwd`/../../rpm.doc/libgccjit-devel/html
 cd ..
+
+# Build cross compilers here.
+%if %{build_cross}
+echo ==================== BUILD CROSS =========================
+# Get out of obj-%{gcc_target_platform}.
+pushd ..
+for crossarch in %{cross_targets}; do
+  mkdir obj-$crossarch
+  cd obj-$crossarch
+
+  case $crossarch in
+    aarch64*)
+      CONFIGURE_OPTS_FOR_ARCH=""
+      ;;
+    s390x*)
+      CONFIGURE_OPTS_FOR_ARCH="--with-arch=z14 --with-tune=z16"
+      ;;
+    ppc64le*)
+      CONFIGURE_OPTS_FOR_ARCH="--with-cpu-32=power9 --with-tune-32=power10 --with-cpu-64=power9 --with-tune-64=power10"
+      ;;
+    *)
+      echo >&2 "ERROR: unknown cross arch $crossarch"
+      exit 1
+      ;;
+  esac
+
+  # Temporarily replace DEV-PHASE.
+  cp -p ../gcc/DEV-PHASE{.cross,}
+
+  CC="$CC" CXX="$CXX" CFLAGS="$OPT_FLAGS" \
+	  CXXFLAGS="`echo " $OPT_FLAGS " | sed 's/ -Wall / /g;s/ -fexceptions / /g' \
+		    | sed 's/ -Wformat-security / -Wformat -Wformat-security /'`" \
+	  XCFLAGS="$OPT_FLAGS" TCFLAGS="$OPT_FLAGS" \
+	  ../configure $CONFIGURE_OPTS_BASE $CONFIGURE_OPTS_CROSS \
+	  --with-sysroot=/usr/$crossarch/sys-root/el10/ \
+	  --with-gxx-include-dir="/usr/$crossarch/sys-root/el10/%{_prefix}/include/c++/%{gcc_major}" \
+	  --target=$crossarch \
+	  $CONFIGURE_OPTS_FOR_ARCH
+  make %{?_smp_mflags} LDFLAGS_FOR_TARGET=-Wl,-z,relro,-z,now
+
+  # Restore DEV-PHASE.
+  cp -p ../gcc/DEV-PHASE{.native,}
+  # Out of obj-$crossarch.
+  cd ..
+done
+# Go back to obj-%{gcc_target_platform}.
+popd
+echo ==================== BUILD CROSS END =========================
+%endif
 
 %if %{build_isl}
 cp -a isl-install/lib/libisl.so.23 gcc/
@@ -1523,6 +1897,230 @@ make prefix=%{buildroot}%{_prefix} mandir=%{buildroot}%{_mandir} \
 chmod 644 %{buildroot}%{_infodir}/gnat*
 %endif
 
+%if %{build_cross}
+echo ==================== INSTALL CROSS =========================
+# Out of obj-%{gcc_target_platform}.
+pushd ..
+for crossarch in %{cross_targets}; do
+  cd obj-$crossarch
+
+  CROSS_LIBPATH=%{buildroot}%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/
+
+  # Temporarily replace DEV-PHASE.
+  cp -p ../gcc/DEV-PHASE{.cross,}
+
+  # --with-gxx-include-dir= doesn't prefix its argument with $(DESTDIR)
+  # and you can't install things into /usr unless you're root.
+  mkdir scratch
+  scratchdir=`pwd`/scratch
+  pushd $crossarch/libstdc++-v3
+  for i in `find . -name Makefile`; do
+    cp -a $i $i.save
+    sed -i -e 's?^gxx_include_dir = .*$?gxx_include_dir = '$scratchdir'?' $i
+    touch -r $i.save $i
+  done
+  popd
+
+  # Use -j1, because build-many-glibcs says:
+  # Parallel "make install" for GCC has race conditions that can
+  # cause it to fail; see
+  # <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=42980>.  Such
+  # problems are not known for binutils, but doing the
+  # installation in parallel within a particular toolchain build
+  # (as opposed to installation of one toolchain from
+  # build-many-glibcs.py running in parallel to the installation
+  # of other toolchains being built) is not known to be
+  # significantly beneficial, so it is simplest just to disable
+  # parallel install for cross tools here.
+  make -j1 prefix=%{buildroot}%{_prefix} mandir=%{buildroot}%{_mandir} \
+    infodir=%{buildroot}%{_infodir} install
+
+  # Restore DEV-PHASE.
+  cp -p ../gcc/DEV-PHASE{.native,}
+
+  # Restore Makefiles with the old gxx_include_dir.
+  pushd $crossarch/libstdc++-v3
+  for i in `find . -name Makefile`; do
+    mv -f $i.save $i
+  done
+  popd
+  # We're not shipping C++ headers; nuke 'em.
+  rm -rf $scratchdir
+
+  # We do not ship therse and GDB fails with:
+  # *** ERROR:: GDB exited with exit status 1 during index generation
+  rm -rf %{buildroot}%{_prefix}/$crossarch/lib64/libssp.so.*
+  rm -rf %{buildroot}%{_prefix}/$crossarch/lib64/libitm.so.*
+  rm -rf %{buildroot}%{_prefix}/$crossarch/lib64/libgomp.so.*
+  rm -rf %{buildroot}%{_prefix}/$crossarch/lib64/libatomic.so.*
+  rm -rf %{buildroot}%{_prefix}/$crossarch/lib64/libstdc++.so.*
+  rm -rf %{buildroot}%{_prefix}/$crossarch/lib64/libquadmath.so.*
+  rm -rf %{buildroot}%{_prefix}/$crossarch/lib64/libasan.so.*
+  rm -rf %{buildroot}%{_prefix}/$crossarch/lib64/libhwasan.so.*
+  rm -rf %{buildroot}%{_prefix}/$crossarch/lib64/libtsan.so.*
+  rm -rf %{buildroot}%{_prefix}/$crossarch/lib64/liblsan.so.*
+  rm -rf %{buildroot}%{_prefix}/$crossarch/lib64/libubsan.so.*
+
+  # Move libgomp.spec to where it belongs for %files.
+  mv $crossarch/libgomp/libgomp.spec $CROSS_LIBPATH
+  # Likewise for libitm.spec
+  %if %{build_libitm}
+  mv $crossarch/libitm/libitm.spec $CROSS_LIBPATH
+  %endif
+  # Likewise for libsanitizer.spec
+  mv $crossarch/libsanitizer/libsanitizer.spec $CROSS_LIBPATH
+
+  cd ..
+
+  # No longer present.
+  #pushd $CROSS_LIBPATH
+  #mv include-fixed/syslimits.h include/syslimits.h
+  #mv include-fixed/limits.h include/limits.h
+  #popd
+
+  case $crossarch in
+    aarch64*)
+      OUTPUT_FORMAT_FOR_ARCH="elf64-littleaarch64"
+      ;;
+    s390x*)
+      OUTPUT_FORMAT_FOR_ARCH="elf64-s390"
+      ;;
+    ppc64le*)
+      OUTPUT_FORMAT_FOR_ARCH="elf64-powerpcle"
+      ;;
+    *)
+      echo >&2 "ERROR: unknown cross arch $crossarch"
+      exit 1
+      ;;
+  esac
+
+  # The sysroot package cretion should copy the same files as
+  # referenced in these linker scripts to the sysroot package
+  # location.
+  echo "/* GNU ld script
+   Use the shared library, but some functions are only in
+   the static library.  */
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+GROUP ( =/lib64/libgcc_s.so.1 libgcc.a )" > $CROSS_LIBPATH/libgcc_s.so
+
+  echo "/* GNU ld script
+   Use the shared library from sysroot.  */
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =%{_prefix}/lib64/libgomp.so.1 )" > $CROSS_LIBPATH/libgomp.so
+
+  echo "/* GNU ld script
+   Use the shared library from sysroot.  */
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =/%{_prefix}/lib64/libstdc++.so.6 )" > $CROSS_LIBPATH/libstdc++.so
+
+  echo "/* GNU ld script
+   Use the static library from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libstdc++.a )" > $CROSS_LIBPATH/libstdc++.a
+
+  echo "/* GNU ld script
+   Use the static library from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libstdc++fs.a )" > $CROSS_LIBPATH/libstdc++fs.a
+
+  echo "/* GNU ld script
+   Use the static library from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libstdc++exp.a )" > $CROSS_LIBPATH/libstdc++exp.a
+
+  echo "/* GNU ld script
+   Use the static library from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libsupc++.a )" > $CROSS_LIBPATH/libsupc++.a
+
+  echo "/* GNU ld script
+   Use the shared library from sysroot.  */
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =%{_prefix}/lib64/libatomic.so.1 )" > $CROSS_LIBPATH/libatomic.so
+
+  echo "/* GNU ld script
+   Use the static library from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libatomic.a )" > $CROSS_LIBPATH/libatomic.a
+
+  echo "/* GNU ld script
+   Use the shared library from sysroot.  */
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =%{_prefix}/lib64/libitm.so.1 )" > $CROSS_LIBPATH/libitm.so
+
+  echo "/* GNU ld script
+   Use the static library from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libitm.a )" > $CROSS_LIBPATH/libitm.a
+
+  echo "/* GNU ld script
+   Use the shared library from sysroot.  */
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =%{_prefix}/lib64/libasan.so.8 )" > $CROSS_LIBPATH/libasan.so
+
+  echo "/* GNU ld script
+   Use the static library from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libasan.a )" > $CROSS_LIBPATH/libasan.a
+
+  echo "/* GNU ld script
+   Use the object from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libasan_preinit.o )" > $CROSS_LIBPATH/libasan_preinit.o
+
+  echo "/* GNU ld script
+   Use the shared library from sysroot.  */
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =%{_prefix}/lib64/libhwasan.so.0 )" > $CROSS_LIBPATH/libhwasan.so
+
+  echo "/* GNU ld script
+   Use the static library from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libhwasan.a )" > $CROSS_LIBPATH/libhwasan.a
+
+  echo "/* GNU ld script
+   Use the object from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libhwasan_preinit.o )" > $CROSS_LIBPATH/libhwasan_preinit.o
+
+  echo "/* GNU ld script
+   Use the shared library from sysroot.  */
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =%{_prefix}/lib64/libtsan.so.2 )" > $CROSS_LIBPATH/libtsan.so
+
+  echo "/* GNU ld script
+   Use the static library from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libtsan.a )" > $CROSS_LIBPATH/libtsan.a
+
+  echo "/* GNU ld script
+   Use the object from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libtsan_preinit.o )" > $CROSS_LIBPATH/libtsan_preinit.o
+
+  echo "/* GNU ld script
+   Use the shared library from sysroot.  */
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =%{_prefix}/lib64/liblsan.so.0 )" > $CROSS_LIBPATH/liblsan.so
+
+  echo "/* GNU ld script
+   Use the static library from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/liblsan.a )" > $CROSS_LIBPATH/liblsan.a
+
+  echo "/* GNU ld script
+   Use the object from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/liblsan_preinit.o )" > $CROSS_LIBPATH/liblsan_preinit.o
+
+  echo "/* GNU ld script
+   Use the shared library from sysroot.  */
+OUTPUT_FORMAT($OUTPUT_FORMAT_FOR_ARCH)
+INPUT ( =%{_prefix}/lib64/libubsan.so.1 )" > $CROSS_LIBPATH/libubsan.so
+
+  echo "/* GNU ld script
+   Use the static library from sysroot.  */
+INPUT( =%{_prefix}/lib/gcc/$crossarch/%{gcc_major}/libubsan.a )" > $CROSS_LIBPATH/libubsan.a
+
+  # Help plugins find out nvra.
+  echo gcc-%{version}-%{release}.%{_arch} > $CROSS_LIBPATH/rpmver
+
+  # TODO
+  # Add symlink to lto plugin in the binutils plugin directory.
+  #%{__mkdir_p} %{buildroot}%{_libdir}/bfd-plugins/
+  #ln -s ../../libexec/gcc/$crossarch/%{gcc_major}/liblto_plugin.so \
+  #   %{buildroot}%{_libdir}/$crossarch/bfd-plugins/
+done
+# Back to obj-%{gcc_target_platform}.
+popd
+echo ==================== INSTALL CROSS END =========================
+%endif
 FULLPATH=%{buildroot}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}
 FULLEPATH=%{buildroot}%{_prefix}/libexec/gcc/%{gcc_target_platform}/%{gcc_major}
 
@@ -2338,6 +2936,55 @@ ln -sf gcc-annobin.so.0.0.0 $FULLPATH/plugin/gcc-annobin.so.0
 ln -sf gcc-annobin.so.0.0.0 $FULLPATH/plugin/gcc-annobin.so
 %endif
 
+###############################################################################
+# Sysroot package creation.
+###############################################################################
+mkdir -p %{buildroot}/%{sysroot_prefix}
+pushd %{buildroot}/%{sysroot_prefix}
+mkdir -p usr/lib usr/lib64
+ln -s usr/lib lib
+ln -s usr/lib64 lib64
+# These match the files referenced in linker scripts generated for cross
+# compilers.
+hwasan_sysroot_libs=
+%if %{build_libhwasan}
+hwasan_sysroot_libs="%{_prefix}/lib64/libhwasan.so.0 \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libhwasan.a \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libhwasan_preinit.o"
+%endif
+for f in /lib64/libgcc_s.so.1 \
+  %{_prefix}/lib64/libgomp.so.1 \
+  %{_prefix}/lib64/libstdc++.so.6 \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libstdc++.a \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libstdc++fs.a \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libstdc++exp.a \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libsupc++.a \
+  %{_prefix}/lib64/libatomic.so.1 \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libatomic.a \
+  %{_prefix}/lib64/libitm.so.1 \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libitm.a \
+  %{_prefix}/lib64/libasan.so.8 \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libasan.a \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libasan_preinit.o \
+  $hwasan_sysroot_libs \
+  %{_prefix}/lib64/libtsan.so.2 \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libtsan.a \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libtsan_preinit.o \
+  %{_prefix}/lib64/liblsan.so.0 \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/liblsan.a \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/liblsan_preinit.o \
+  %{_prefix}/lib64/libubsan.so.1 \
+  %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libubsan.a; do
+    mkdir -p %{buildroot}/%{sysroot_prefix}/$(dirname $f)
+    cp %{buildroot}$f %{buildroot}/%{sysroot_prefix}/$f
+done
+mkdir -p usr/include
+cp -a %{buildroot}%{_prefix}/include/c++ usr/include/c++
+popd
+# For cross testing.
+mkdir %{buildroot}/%{sysroot_prefix}/test-support
+cp obj-%{gcc_target_platform}/gcc/auto-host.h %{buildroot}/%{sysroot_prefix}/test-support/
+
 %check
 cd obj-%{gcc_target_platform}
 
@@ -2387,7 +3034,7 @@ echo ====================TESTING=========================
 %endif
 echo ====================TESTING END=====================
 mkdir testlogs-%{_target_platform}-%{version}-%{release}
-for i in `find . -name \*.log | grep -F testsuite/ | grep -v 'config.log\|acats.*/tests/'`; do
+for i in `find . -name \*.log -o -name \*.sum | grep -F testsuite/ | grep -v 'config.log\|acats.*/tests/'`; do
   ln $i testlogs-%{_target_platform}-%{version}-%{release}/ || :
 done
 tar cf - testlogs-%{_target_platform}-%{version}-%{release} | xz -9e \
@@ -3628,7 +4275,354 @@ end
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/plugin/gcc-annobin.so.0.0.0
 %endif
 
+%if %{build_cross}
+%files -n cross-gcc-aarch64
+%{_prefix}/bin/aarch64-redhat-linux-cpp
+%{_prefix}/bin/aarch64-redhat-linux-gcc
+%{_prefix}/bin/aarch64-redhat-linux-gcc-%{gcc_major}
+%{_prefix}/bin/aarch64-redhat-linux-gcc-ar
+%{_prefix}/bin/aarch64-redhat-linux-gcc-nm
+%{_prefix}/bin/aarch64-redhat-linux-gcc-ranlib
+%{_prefix}/bin/aarch64-redhat-linux-gcov*
+%{_prefix}/bin/aarch64-redhat-linux-lto-dump
+%{_prefix}/libexec/gcc/aarch64-redhat-linux/%{gcc_major}/cc1
+%{_prefix}/libexec/gcc/aarch64-redhat-linux/%{gcc_major}/collect2
+%{_prefix}/libexec/gcc/aarch64-redhat-linux/%{gcc_major}/lto1
+%{_prefix}/libexec/gcc/aarch64-redhat-linux/%{gcc_major}/lto-wrapper
+%{_prefix}/libexec/gcc/aarch64-redhat-linux/%{gcc_major}/liblto_plugin.so
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/aarch64-redhat-linux
+%dir %{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}
+%dir %{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/include
+%dir %{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/include/sanitizer
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/crt*.o
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libgcc.a
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libgcc_eh.a
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libgcov.a
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/include/*.h
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/include/sanitizer/*.h
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/rpmver
+# These are here for ld(1) purposes only.
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libgcc_s.so
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libgomp.so
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libgomp.spec
+%if %{build_libatomic}
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libatomic.so
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libatomic.a
+%endif
+%if %{build_libitm}
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libitm.so
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libitm.a
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libitm.spec
+%endif
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libasan.a
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libasan.so
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libasan_preinit.o
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libhwasan.a
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libhwasan.so
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libhwasan_preinit.o
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libtsan.a
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libtsan.so
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libtsan_preinit.o
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/liblsan.a
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/liblsan.so
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/liblsan_preinit.o
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libubsan.a
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libubsan.so
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libsanitizer.spec
+
+%files -n cross-gcc-c++-aarch64
+%{_prefix}/bin/aarch64-redhat-linux-c++
+%{_prefix}/bin/aarch64-redhat-linux-g++
+%{_prefix}/libexec/gcc/aarch64-redhat-linux/%{gcc_major}/cc1plus
+%{_prefix}/libexec/gcc/aarch64-redhat-linux/%{gcc_major}/g++-mapper-server
+# For ld(1) purposes only.
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libstdc++.so
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libstdc++.a
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libstdc++fs.a
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libstdc++exp.a
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/libsupc++.a
+
+%files -n cross-gcc-plugin-aarch64
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/aarch64-redhat-linux
+%dir %{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}
+%dir %{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/plugin
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/plugin/gtype.state
+%{_prefix}/lib/gcc/aarch64-redhat-linux/%{gcc_major}/plugin/include
+%dir %{_prefix}/libexec/gcc
+%dir %{_prefix}/libexec/gcc/aarch64-redhat-linux
+%dir %{_prefix}/libexec/gcc/aarch64-redhat-linux/%{gcc_major}
+%{_prefix}/libexec/gcc/aarch64-redhat-linux/%{gcc_major}/plugin
+
+%files -n cross-gcc-ppc64le
+%{_prefix}/bin/ppc64le-redhat-linux-cpp
+%{_prefix}/bin/ppc64le-redhat-linux-gcc
+%{_prefix}/bin/ppc64le-redhat-linux-gcc-%{gcc_major}
+%{_prefix}/bin/ppc64le-redhat-linux-gcc-ar
+%{_prefix}/bin/ppc64le-redhat-linux-gcc-nm
+%{_prefix}/bin/ppc64le-redhat-linux-gcc-ranlib
+%{_prefix}/bin/ppc64le-redhat-linux-gcov*
+%{_prefix}/bin/ppc64le-redhat-linux-lto-dump
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/cc1
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/collect2
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/lto1
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/lto-wrapper
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/liblto_plugin.so
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/ppc64le-redhat-linux
+%dir %{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}
+%dir %{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/include
+%dir %{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/include/sanitizer
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/crt*.o
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libgcc.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libgcc_eh.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libgcov.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/include/*.h
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/include/sanitizer/*.h
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/rpmver
+# These are here for ld(1) purposes only.
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libgcc_s.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libgomp.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libgomp.spec
+%if %{build_libatomic}
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libatomic.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libatomic.a
+%endif
+%if %{build_libitm}
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libitm.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libitm.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libitm.spec
+%endif
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libasan.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libasan.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libasan_preinit.o
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libtsan.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libtsan.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libtsan_preinit.o
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/liblsan.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/liblsan.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/liblsan_preinit.o
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libubsan.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libubsan.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libsanitizer.spec
+
+%files -n cross-gcc-c++-ppc64le
+%{_prefix}/bin/ppc64le-redhat-linux-c++
+%{_prefix}/bin/ppc64le-redhat-linux-g++
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/cc1plus
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/g++-mapper-server
+# For ld(1) purposes only.
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libstdc++.so
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libstdc++.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libstdc++fs.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libstdc++exp.a
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/libsupc++.a
+
+%files -n cross-gcc-plugin-ppc64le
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/ppc64le-redhat-linux
+%dir %{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}
+%dir %{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/plugin
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/plugin/gtype.state
+%{_prefix}/lib/gcc/ppc64le-redhat-linux/%{gcc_major}/plugin/include
+%dir %{_prefix}/libexec/gcc
+%dir %{_prefix}/libexec/gcc/ppc64le-redhat-linux
+%dir %{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}
+%{_prefix}/libexec/gcc/ppc64le-redhat-linux/%{gcc_major}/plugin
+
+%files -n cross-gcc-s390x
+%{_prefix}/bin/s390x-redhat-linux-cpp
+%{_prefix}/bin/s390x-redhat-linux-gcc
+%{_prefix}/bin/s390x-redhat-linux-gcc-%{gcc_major}
+%{_prefix}/bin/s390x-redhat-linux-gcc-ar
+%{_prefix}/bin/s390x-redhat-linux-gcc-nm
+%{_prefix}/bin/s390x-redhat-linux-gcc-ranlib
+%{_prefix}/bin/s390x-redhat-linux-gcov*
+%{_prefix}/bin/s390x-redhat-linux-lto-dump
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/cc1
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/collect2
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/lto1
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/lto-wrapper
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/liblto_plugin.so
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/s390x-redhat-linux
+%dir %{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}
+%dir %{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/include
+%dir %{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/include/sanitizer
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/crt*.o
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libgcc.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libgcc_eh.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libgcov.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/include/*.h
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/include/sanitizer/*.h
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/rpmver
+# These are here for ld(1) purposes only.
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libgcc_s.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libgomp.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libgomp.spec
+%if %{build_libatomic}
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libatomic.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libatomic.a
+%endif
+%if %{build_libitm}
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libitm.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libitm.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libitm.spec
+%endif
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libasan.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libasan.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libasan_preinit.o
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libtsan.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libtsan.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libtsan_preinit.o
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/liblsan.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/liblsan.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/liblsan_preinit.o
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libubsan.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libubsan.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libsanitizer.spec
+
+%files -n cross-gcc-c++-s390x
+%{_prefix}/bin/s390x-redhat-linux-c++
+%{_prefix}/bin/s390x-redhat-linux-g++
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/cc1plus
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/g++-mapper-server
+# For ld(1) purposes only.
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libstdc++.so
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libstdc++.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libstdc++fs.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libstdc++exp.a
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/libsupc++.a
+
+%files -n cross-gcc-plugin-s390x
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/s390x-redhat-linux
+%dir %{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}
+%dir %{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/plugin
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/plugin/gtype.state
+%{_prefix}/lib/gcc/s390x-redhat-linux/%{gcc_major}/plugin/include
+%dir %{_prefix}/libexec/gcc
+%dir %{_prefix}/libexec/gcc/s390x-redhat-linux
+%dir %{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}
+%{_prefix}/libexec/gcc/s390x-redhat-linux/%{gcc_major}/plugin
+
+%dnl build_cross
+%endif
+
+%files -n %{sysroot_package_arch}-libgcc
+# Package the symlinks into usr/ here.
+%{sysroot_prefix}/lib
+%{sysroot_prefix}/lib64
+%{sysroot_prefix}%{_prefix}/lib64/libgcc_s.so.1
+
+%files -n %{sysroot_package_arch}-libgomp
+%{sysroot_prefix}%{_prefix}/lib64/libgomp.so.1
+
+%files -n %{sysroot_package_arch}-libstdc++
+%{sysroot_prefix}%{_prefix}/include/c++
+%{sysroot_prefix}%{_prefix}/lib64/libstdc++.so.6
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libstdc++.a
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libstdc++fs.a
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libstdc++exp.a
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libsupc++.a
+
+%files -n %{sysroot_package_arch}-libatomic
+%{sysroot_prefix}%{_prefix}/lib64/libatomic.so.1
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libatomic.a
+
+%files -n %{sysroot_package_arch}-libitm
+%{sysroot_prefix}%{_prefix}/lib64/libitm.so.1
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libitm.a
+
+%files -n %{sysroot_package_arch}-libsanitizer
+%{sysroot_prefix}%{_prefix}/lib64/libasan.so.8
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libasan.a
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libasan_preinit.o
+%if %{build_libhwasan}
+%{sysroot_prefix}%{_prefix}/lib64/libhwasan.so.0
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libhwasan.a
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libhwasan_preinit.o
+%endif
+%{sysroot_prefix}%{_prefix}/lib64/libtsan.so.2
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libtsan.a
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libtsan_preinit.o
+%{sysroot_prefix}%{_prefix}/lib64/liblsan.so.0
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/liblsan.a
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/liblsan_preinit.o
+%{sysroot_prefix}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_major}/libubsan.a
+%{sysroot_prefix}%{_prefix}/lib64/libubsan.so.1
+
+%files -n %{sysroot_package_arch}-test-support
+# Package the symlinks into usr/ here.
+%{sysroot_prefix}/test-support
+%{sysroot_prefix}/test-support/auto-host.h
+
 %changelog
+* Tue Feb 17 2026 Joseph Myers <josmyers@redhat.com> - 14.3.1-4.4
+- fixes for testing non-production cross compilers (RHEL-114521)
+  - include libsanitizer.spec and static sanitizer libraries in packages
+  - enable tests involving target environment variables in cross testing
+  - disable color for more sanitizer tests
+
+* Mon Jan 26 2026 Joseph Myers <josmyers@redhat.com> - 14.3.1-4.3
+- fixes for testing non-production cross compilers (RHEL-114521)
+  - enable guality tests in cross testing
+  - enable simulate-thread tests in cross testing
+  - enable gcov tests in cross testing
+  - enable some miscellaneous tests in cross testing
+  - fix some tree-prof tests for cross testing
+
+* Tue Jan  6 2026 Joseph Myers <josmyers@redhat.com> - 14.3.1-4.2
+- fixes for testing non-production cross compilers (RHEL-114521)
+  - enable stack-protector tests in cross testing
+
+* Mon Dec 15 2025 Joseph Myers <josmyers@redhat.com> - 14.3.1-4.1
+- fixes for testing non-production cross compilers (RHEL-114521)
+  - include libstdc++fs.a and libstdc++exp.a in sysroot packages
+  - add libsanitizer sysroot packages
+  - save testsuite .sum files in build logs
+  - add packages with files from build tree used in testsuite
+  - escape \r in dg-regexp test names to avoid truncation in build-tree testing
+  - fix iconv linking for installed testing
+  - enable compat testing for installed testing
+  - distinguish canonical and noncanonical target for installed testing
+  - add plugin headers packages for cross compilers
+  - install text-art/*.h plugin headers
+  - support plugin tests for installed testing
+
+* Tue Oct 28 2025 Siddhesh Poyarekar <siddhesh@redhat.com> - 14.3.1-4
+- update from releases/gcc-14 branch
+  - PRs ada/107536, ada/113536, analyzer/118300, c/122188, c++/120620,
+	c++/120757, c++/121801, c++/121977, c++/121981, fortran/89092,
+	fortran/120784, fortran/121145, fortran/121263, go/104290,
+	libstdc++/110853, libstdc++/117276, libstdc++/120698,
+	libstdc++/121097, libstdc++/121374, libstdc++/121496,
+	libstdc++/121745, libstdc++/121827, libstdc++/122168,
+	libstdc++/122322, middle-end/121453, middle-end/121828, other/118919,
+	rtl-optimization/121253, target/49857, target/81540, target/118280,
+	target/120442, target/120476, target/120691, target/121118,
+	target/121208, target/121294, target/121414, target/121449,
+	target/121542, target/121599, target/121608, target/121749,
+	target/122177, target/122187, target/122210, target/122220,
+	target/122222, testsuite/118567, tree-optimization/117423,
+	tree-optimization/119085, tree-optimization/120357,
+	tree-optimization/120358, tree-optimization/120654,
+	tree-optimization/120817, tree-optimization/120944,
+	tree-optimization/121059, tree-optimization/121256,
+	tree-optimization/121370, tree-optimization/121772,
+	tree-optimization/121870, tree-optimization/122104
+
+* Wed Oct 22 2025 Joseph Myers <josmyers@redhat.com> - 14.3.1-2.4
+- add sysroot packages for use by non-production cross compilers (RHEL-118680)
+
+* Thu Oct 16 2025 Marek Polacek <polacek@redhat.com> 14.3.1-2.3
+- add cross compilers for aarch64, ppc64le and s390x for non-production uses
+  (RHEL-114519)
+
+* Mon Sep 22 2025 Siddhesh Poyarekar <siddhesh@redhat.com> - 14.3.1-2.2
+- Add branch, conditions, and calls to gcov function summaries (RHEL-105464)
+
 * Mon Jun 23 2025 Siddhesh Poyarekar <siddhesh@redhat.com> - 14.3.1-2.1
 - Update to latest pretty printers from GTS (RHEL-81976)
 
