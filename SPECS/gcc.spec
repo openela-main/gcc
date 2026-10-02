@@ -5,7 +5,7 @@
 %global gcc_major 8
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 28
+%global gcc_release 29
 %global nvptx_tools_gitrev c28050f60193b3b95a18866a96f03334e874e78f
 %global nvptx_newlib_gitrev aadc8eb0ec43b7cd0dd2dfb484bae63c8b05ef24
 %global _unpackaged_files_terminate_build 0
@@ -312,11 +312,17 @@ Patch50:              gcc8-pr100508.patch
 Patch51:              gcc8-pr118976.patch
 
 # Any patches changing libstdc++-v3/python and its tests should go after this.
+# Generated prettyprinter update patches (do not edit, verify with recorded
+# commit hashes).
 Patch1000:            gcc8-libstdc++-prettyprinter-update-15.patch
 Patch1001:            gcc8-libstdc++-prettyprinter-update-15-tests.patch
-Patch1002:            gcc8-libstdc++-prettyprinter-update-15-tests-48362.patch
-Patch1003:            gcc8-libstdc++-prettyprinter-update-15-tests-cxx11.patch
-Patch1004:            gcc8-libstdc++-prettyprinter-update-15-tests-cxx17.patch
+Patch1002:            gcc8-libstdc++-prettyprinter-update-16.patch
+Patch1003:            gcc8-libstdc++-prettyprinter-update-16-tests.patch
+# Hand-written prettyprinter test adjustments (must be applied after all
+# generated patches above).
+Patch1004:            gcc8-libstdc++-prettyprinter-update-15-tests-48362.patch
+Patch1005:            gcc8-libstdc++-prettyprinter-update-15-tests-cxx11.patch
+Patch1006:            gcc8-libstdc++-prettyprinter-update-15-tests-cxx17.patch
 
 Patch2000:            nvptx-tools-no-ptxas.patch
 Patch2001:            nvptx-tools-build.patch
@@ -944,11 +950,13 @@ so that there cannot be any synchronization problems.
 %patch50 -p1 -b .pr100508~
 %patch51 -p1 -b .pr118976~
 
-%patch1000 -p1 -b .libstdc++-prettyprinter-update-14~
-%patch1001 -p1 -b .libstdc++-prettyprinter-update-14-tests~
-%patch1002 -p1 -b .libstdc++-prettyprinter-update-14-tests-48362~
-%patch1003 -p1 -b .libstdc++-prettyprinter-update-14-tests-cxx11~
-%patch1004 -p1 -b .libstdc++-prettyprinter-update-14-tests-cxx17~
+%patch1000 -p1 -b .libstdc++-prettyprinter-update-15
+%patch1001 -p1 -b .libstdc++-prettyprinter-update-15-tests
+%patch1002 -p1 -b .libstdc++-prettyprinter-update-16
+%patch1003 -p1 -b .libstdc++-prettyprinter-update-16-tests
+%patch1004 -p1 -b .libstdc++-prettyprinter-update-15-tests-48362
+%patch1005 -p1 -b .libstdc++-prettyprinter-update-15-tests-cxx11
+%patch1006 -p1 -b .libstdc++-prettyprinter-update-15-tests-cxx17
 
 cd nvptx-tools-%{nvptx_tools_gitrev}
 %patch2000 -p1 -b .nvptx-tools-no-ptxas~
@@ -3356,6 +3364,9 @@ fi
 %{ANNOBIN_GCC_PLUGIN_DIR}/gcc-annobin.so.0.0.0
 
 %changelog
+* Wed Jul 15 2026 Siddhesh Poyarekar <siddhesh@redhat.com> - 8.5.0-29
+- Update libstdc++ pretty printers from GCC 16 GTS (RHEL-169099)
+
 * Mon Jun 23 2025 Siddhesh Poyarekar <siddhesh@redhat.com> 8.5.0-28
 - Sync libstdc++ pretty printers to latest GTS (RHEL-82506).
 
