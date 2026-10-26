@@ -5,7 +5,7 @@
 %global gcc_major 8
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 29
+%global gcc_release 30
 %global nvptx_tools_gitrev c28050f60193b3b95a18866a96f03334e874e78f
 %global nvptx_newlib_gitrev aadc8eb0ec43b7cd0dd2dfb484bae63c8b05ef24
 %global _unpackaged_files_terminate_build 0
@@ -310,6 +310,8 @@ Patch48:              gcc8-pr111070.patch
 Patch49:              gcc8-RHEL-32886.patch
 Patch50:              gcc8-pr100508.patch
 Patch51:              gcc8-pr118976.patch
+Patch52:              gcc8-pr127656.patch
+Patch53:              gcc8-RHEL-266622.patch
 
 # Any patches changing libstdc++-v3/python and its tests should go after this.
 # Generated prettyprinter update patches (do not edit, verify with recorded
@@ -949,6 +951,8 @@ so that there cannot be any synchronization problems.
 %patch49 -p0 -b .32886~
 %patch50 -p1 -b .pr100508~
 %patch51 -p1 -b .pr118976~
+%patch52 -p1 -b .pr127656~
+%patch53 -p1 -b .rhel-266622~
 
 %patch1000 -p1 -b .libstdc++-prettyprinter-update-15
 %patch1001 -p1 -b .libstdc++-prettyprinter-update-15-tests
@@ -3364,6 +3368,10 @@ fi
 %{ANNOBIN_GCC_PLUGIN_DIR}/gcc-annobin.so.0.0.0
 
 %changelog
+* Thu Oct 15 2026 Jonathan Wakely <jwakely@redhat.com> - 8.5.0-30
+- fix CVE-2026-102010, PR libstdc++/127656 (RHEL-272111)
+- fix CVE-2026-95619, overflow in aligned operator new (RHEL-266622)
+
 * Wed Jul 15 2026 Siddhesh Poyarekar <siddhesh@redhat.com> - 8.5.0-29
 - Update libstdc++ pretty printers from GCC 16 GTS (RHEL-169099)
 
