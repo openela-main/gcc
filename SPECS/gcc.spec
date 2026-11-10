@@ -1,10 +1,10 @@
-%global DATE 20251022
-%global gitrev 7cb09bad6a2ef6c95cdcb57821f7f01f477c5437
-%global gcc_version 14.3.1
+%global DATE 20260724
+%global gitrev 9b7c3d461b3ec3ad6b529b2fa7b081b1ef1eb133
+%global gcc_version 14.4.1
 %global gcc_major 14
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 4
+%global gcc_release 3
 %global nvptx_tools_gitrev 87ce9dc5999e5fca2e1d3478a30888d9864c9804
 %global newlib_cygwin_gitrev d45261f62a15f8abd94a1031020b9a9f455e4eed
 %global _unpackaged_files_terminate_build 0
@@ -166,7 +166,7 @@
 Summary: Various compilers (C, C++, Objective-C, ...)
 Name: gcc
 Version: %{gcc_version}
-Release: %{gcc_release}.4%{?dist}
+Release: %{gcc_release}%{?dist}
 # License notes for some of the less obvious ones:
 #   gcc/doc/cppinternals.texi: Linux-man-pages-copyleft-2-para
 #   isl: MIT, BSD-2-Clause
@@ -336,6 +336,8 @@ Patch100: gcc14-fortran-fdec-duplicates.patch
 # Pretty printer updates for GTS
 Patch1000: gcc14-libstdc++-prettyprinter-update-15.patch
 Patch1001: gcc14-libstdc++-prettyprinter-update-15-tests.patch
+Patch1002: gcc14-libstdc++-prettyprinter-update-16.patch
+Patch1003: gcc14-libstdc++-prettyprinter-update-16-tests.patch
 
 # Backports
 Patch2000: gcc14-gcov-function-summaries.patch
@@ -1203,6 +1205,8 @@ touch -r isl-0.24/m4/ax_prog_cxx_for_build.m4 isl-0.24/m4/ax_prog_cc_for_build.m
 
 %patch -P1000 -p1 -b .libstdc++-prettyprinter-update-15
 %patch -P1001 -p1 -b .libstdc++-prettyprinter-update-15-tests
+%patch -P1002 -p1 -b .libstdc++-prettyprinter-update-16
+%patch -P1003 -p1 -b .libstdc++-prettyprinter-update-16-tests
 
 %patch -P2000 -p1 -b .gcov-function-summaries
 
@@ -4559,6 +4563,107 @@ end
 %{sysroot_prefix}/test-support/auto-host.h
 
 %changelog
+* Tue Aug 18 2026 Siddhesh Poyarekar <siddhesh@redhat.com> - 14.4.1-3
+- Update libstdc++ pretty printers from GCC 16 GTS (RHEL-169096)
+- Regenerate GCC 15 GTS pretty printer patches for current base
+
+* Fri Jul 24 2026 David Malcolm <dmalcolm@redhat.com> - 14.4.1-2
+- update from releases/gcc-14 branch
+  - PRs c++/125674, c++/126057, fortran/97592, fortran/103367, fortran/125172,
+	fortran/125998, middle-end/126084, rtl-optimization/125173,
+	target/67459, target/105116, target/106895, target/116597,
+	target/119210, target/122948, target/124908, target/125818,
+	target/125972, target/126049, tree-optimization/120201,
+	tree-optimization/126257, tree-optimization/126262
+
+* Mon Jun 29 2026 Joseph Myers <josmyers@redhat.com> - 14.4.1-1
+- update from releases/gcc-14 branch (RHEL-174638)
+  - GCC 14.4 release
+  - PRs ada/107475, ada/123060, ada/123138, ada/123289, ada/123867,
+	ada/124226, ada/124285, ada/124607, ada/124836, ada/125044,
+	ada/125695, c/101312, c/105555, c/123018, c/123156, c/123365,
+	c/123882, c/124830, c++/65271, c++/91388, c++/97740, c++/98930,
+	c++/101670, c++/120224, c++/120685, c++/120876, c++/121445,
+	c++/121822, c++/122070, c++/122318, c++/122494, c++/122550,
+	c++/122658, c++/122772, c++/122834, c++/123346, c++/123529,
+	c++/123578, c++/123597, c++/123667, c++/123676, c++/123684,
+	c++/123814, c++/123818, c++/123845, c++/123889, c++/124489,
+	c++/124632, c++/124850, c++/125315, c++/125376, d/119799, d/120096,
+	d/121477, d/123046, d/123264, d/123349, d/123407, d/123419, d/123422,
+	d/123798, d/124026, d/125089, debug/121964, debug/123886,
+	fortran/79524, fortran/82721, fortran/84245, fortran/85352,
+	fortran/93715, fortran/93814, fortran/93832, fortran/94978,
+	fortran/95338, fortran/95879, fortran/96087, fortran/96986,
+	fortran/98203, fortran/100155, fortran/100194, fortran/102430,
+	fortran/102459, fortran/102596, fortran/102619, fortran/105168,
+	fortran/106546, fortran/106946, fortran/107425, fortran/107968,
+	fortran/109788, fortran/115260, fortran/116829, fortran/119273,
+	fortran/120286, fortran/120723, fortran/121616, fortran/122046,
+	fortran/122206, fortran/124161, fortran/124450, fortran/124482,
+	fortran/124751, ipa/106260, ipa/111036, ipa/114790, ipa/116296,
+	ipa/122856, ipa/123416, ipa/125699, libstdc++/90192, libstdc++/102259,
+	libstdc++/105580, libstdc++/105857, libstdc++/109965,
+	libstdc++/114153, libstdc++/114865, libstdc++/118088,
+	libstdc++/118681, libstdc++/120029, libstdc++/120293,
+	libstdc++/120390, libstdc++/120789, libstdc++/121771,
+	libstdc++/122062, libstdc++/122567, libstdc++/122661,
+	libstdc++/122726, libstdc++/122821, libstdc++/122842,
+	libstdc++/123100, libstdc++/123147, libstdc++/123875,
+	libstdc++/123991, libstdc++/124024, libstdc++/124124,
+	libstdc++/124363, libstdc++/124568, libstdc++/125369, lto/121588,
+	lto/122515, lto/122620, middle-end/111817, middle-end/116772,
+	middle-end/120052, middle-end/120564, middle-end/121581,
+	middle-end/122624, middle-end/122689, middle-end/123175,
+	middle-end/123386, middle-end/123573, middle-end/123575,
+	middle-end/123703, middle-end/123775, middle-end/123876,
+	middle-end/123887, middle-end/123978, middle-end/124056,
+	middle-end/124250, middle-end/124491, middle-end/125146,
+	middle-end/125621, pch/14940, preprocessor/105412,
+	preprocessor/123273, rtl-optimization/106859, rtl-optimization/116053,
+	rtl-optimization/116600, rtl-optimization/120182,
+	rtl-optimization/121773, rtl-optimization/122215,
+	rtl-optimization/123121, rtl-optimization/123294,
+	rtl-optimization/124454, target/99930, target/105192, target/112400,
+	target/117575, target/117771, target/119079, target/119130,
+	target/120250, target/120645, target/122000, target/122097,
+	target/122223, target/122323, target/122446, target/122516,
+	target/122527, target/122695, target/122867, target/123102,
+	target/123155, target/123217, target/123271, target/123285,
+	target/123457, target/123460, target/123484, target/123521,
+	target/123548, target/123607, target/123624, target/123742,
+	target/123766, target/123779, target/123807, target/124126,
+	target/124133, target/124138, target/124236, target/124315,
+	target/124316, target/124335, target/124365, target/124366,
+	target/124705, target/124712, target/124933, target/125049,
+	target/125351, target/125409, target/125611, target/125670,
+	target/125751, target/125752, target/125795, target/125992,
+	testsuite/123004, testsuite/123353, testsuite/124682,
+	tree-optimization/107997, tree-optimization/109410,
+	tree-optimization/110043, tree-optimization/117217,
+	tree-optimization/119532, tree-optimization/119568,
+	tree-optimization/120341, tree-optimization/120560,
+	tree-optimization/120987, tree-optimization/121104,
+	tree-optimization/121776, tree-optimization/121844,
+	tree-optimization/122126, tree-optimization/122394,
+	tree-optimization/122408, tree-optimization/122793,
+	tree-optimization/122943, tree-optimization/122976,
+	tree-optimization/123061, tree-optimization/123300,
+	tree-optimization/123351, tree-optimization/123431,
+	tree-optimization/123513, tree-optimization/123537,
+	tree-optimization/123596, tree-optimization/123602,
+	tree-optimization/123636, tree-optimization/123645,
+	tree-optimization/123729, tree-optimization/123736,
+	tree-optimization/123741, tree-optimization/123864,
+	tree-optimization/124130, tree-optimization/124132,
+	tree-optimization/124135, tree-optimization/124151,
+	tree-optimization/124288, tree-optimization/124358,
+	tree-optimization/124555, tree-optimization/124627,
+	tree-optimization/124677, tree-optimization/124826,
+	tree-optimization/124868, tree-optimization/125019,
+	tree-optimization/125025, tree-optimization/125039,
+	tree-optimization/125079, tree-optimization/125431,
+	tree-optimization/125501, tree-optimization/125774
+
 * Tue Feb 17 2026 Joseph Myers <josmyers@redhat.com> - 14.3.1-4.4
 - fixes for testing non-production cross compilers (RHEL-114521)
   - include libsanitizer.spec and static sanitizer libraries in packages
