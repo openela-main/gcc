@@ -5,7 +5,7 @@
 %global gcc_major 11
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 14
+%global gcc_release 15
 %global nvptx_tools_gitrev 5f6f343a302d620b0868edab376c00b15741e39e
 %global newlib_cygwin_gitrev 50e2a63b04bdd018484605fbb954fd1bd5147fa0
 %global _unpackaged_files_terminate_build 0
@@ -347,6 +347,8 @@ Patch109:             gcc11-fortran-fdec-add-missing-indexes.patch
 Patch1000:            gcc11-libstdc++-prettyprinter-update-15.patch
 Patch1001:            gcc11-libstdc++-prettyprinter-update-15-tests.patch
 Patch1002:            gcc11-libstdc++-prettyprinter-update-15-tests-48362.patch
+Patch1003:            gcc11-libstdc++-prettyprinter-update-16.patch
+Patch1004:            gcc11-libstdc++-prettyprinter-update-16-tests.patch
 
 # Backports
 Patch2000:            gcc11-fix-failures-with-default-SSP.patch
@@ -1071,6 +1073,8 @@ mark them as cross compiled.
 %patch1000 -p1 -b .libstdc++-prettyprinter-update-15
 %patch1001 -p1 -b .libstdc++-prettyprinter-update-15-tests
 %patch1002 -p1 -b .libstdc++-prettyprinter-update-15-tests-48362
+%patch1003 -p1 -b .libstdc++-prettyprinter-update-16
+%patch1004 -p1 -b .libstdc++-prettyprinter-update-16-tests
 
 %patch2000 -p1 -b .fix-failures-with-default-SSP
 %patch2001 -p1 -b .disable-stack-protector-for-tests-relying-on-stack-offset
@@ -3871,6 +3875,9 @@ end
 %endif
 
 %changelog
+* Thu Jul 09 2026 Siddhesh Poyarekar <siddhesh@redhat.com> - 11.5.0-15
+- Update libstdc++ pretty printers from GCC 16 GTS (RHEL-169098)
+
 * Thu Oct 30 2025 David Malcolm <dmalcolm@redhat.com> - 11.5.0-14
 - Add backport of upstream r15-8946-g580664d1b66a5d to gcc 11, adding
   branches and calls to gcov output, but not conditions (RHEL-105416).
