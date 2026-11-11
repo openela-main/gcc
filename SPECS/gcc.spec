@@ -4,7 +4,7 @@
 %global gcc_major 14
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 3
+%global gcc_release 5
 %global nvptx_tools_gitrev 87ce9dc5999e5fca2e1d3478a30888d9864c9804
 %global newlib_cygwin_gitrev d45261f62a15f8abd94a1031020b9a9f455e4eed
 %global _unpackaged_files_terminate_build 0
@@ -328,6 +328,11 @@ Patch9: gcc14-Wno-format-security.patch
 Patch10: gcc14-rh1574936.patch
 Patch11: gcc14-d-shared-libphobos.patch
 Patch12: gcc14-pr101523.patch
+Patch13: gcc14-pr127656.patch
+Patch14: gcc14-cve-2026-114691.patch
+Patch15: gcc14-pr127666.patch
+Patch16: gcc14-pr124370.patch
+Patch17: gcc14-cve-2026-114690.patch
 
 Patch50: isl-rh2155127.patch
 
@@ -1195,6 +1200,11 @@ testsuites that can be installed across architectures.
 %endif
 %patch -P11 -p0 -b .d-shared-libphobos~
 %patch -P12 -p1 -b .pr101523~
+%patch -P13 -p1 -b .pr127656~
+%patch -P14 -p1 -b .cve-2026-114691~
+%patch -P15 -p1 -b .pr127666~
+%patch -P16 -p1 -b .pr124370~
+%patch -P17 -p1 -b .cve-2026-114690.patch~
 
 %patch -P50 -p0 -b .rh2155127~
 touch -r isl-0.24/m4/ax_prog_cxx_for_build.m4 isl-0.24/m4/ax_prog_cc_for_build.m4
@@ -4563,6 +4573,15 @@ end
 %{sysroot_prefix}/test-support/auto-host.h
 
 %changelog
+* Wed Nov 04 2026 Tomasz Kamiński <tkaminsk@redhat.com> - 14.4.1-5
+- fix CVE-2026-114691 (RHEL-297285)
+- fix CVE-2026-115456, PR libstdc++/127666 (RHEL-297380)
+- fix CVE-2026-115455, PR libstdc++/124370 (RHEL-297091)
+- fix CVE-2026-114690 (RHEL-300066)
+
+* Wed Oct 07 2026 Jonathan Wakely <jwakely@redhat.com> - 14.4.1-4
+- fix CVE-2026-102010, PR libstdc++/127656 (RHEL-272102)
+
 * Tue Aug 18 2026 Siddhesh Poyarekar <siddhesh@redhat.com> - 14.4.1-3
 - Update libstdc++ pretty printers from GCC 16 GTS (RHEL-169096)
 - Regenerate GCC 15 GTS pretty printer patches for current base
