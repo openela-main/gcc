@@ -5,7 +5,7 @@
 %global gcc_major 11
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 15
+%global gcc_release 17
 %global nvptx_tools_gitrev 5f6f343a302d620b0868edab376c00b15741e39e
 %global newlib_cygwin_gitrev 50e2a63b04bdd018484605fbb954fd1bd5147fa0
 %global _unpackaged_files_terminate_build 0
@@ -331,6 +331,11 @@ Patch65:              gcc-RHEL-105072-24.patch
 Patch66:              gcc-RHEL-105072-25.patch
 Patch67:              gcc-RHEL-105072-26.patch
 Patch68:              gcc-RHEL-105072-27.patch
+Patch69:              gcc11-pr127656.patch
+Patch70:              gcc11-RHEL-266646.patch
+Patch71:              gcc11-cve-2026-114691.patch
+Patch72:              gcc11-pr127666.patch
+Patch73:              gcc11-cve-2026-114690.patch
 
 Patch100:             gcc11-fortran-fdec-duplicates.patch
 Patch101:             gcc11-fortran-flogical-as-integer.patch
@@ -1056,6 +1061,11 @@ mark them as cross compiled.
 %patch66 -p1 -b .rhel-105072-25~
 %patch67 -p1 -b .rhel-105072-26~
 %patch68 -p1 -b .rhel-105072-27~
+%patch69 -p1 -b .pr127656~
+%patch70 -p1 -b .rhel-266646~
+%patch71 -p1 -b .cve-2026-114691~
+%patch72 -p1 -b .pr127666~
+%patch73 -p1 -b .cve-2026-114690~
 
 %if 0%{?rhel} >= 9
 %patch100 -p1 -b .fortran-fdec-duplicates~
@@ -3875,6 +3885,15 @@ end
 %endif
 
 %changelog
+* Tue Nov 03 2026 Tomasz Kamiński <tkaminsk@redhat.com> - 11.5.0-17
+- fix CVE-2026-114691 (RHEL-297293)
+- fix CVE-2026-115456, PR libstdc++/127666 (RHEL-297090)
+- fix CVE-2026-114690 (RHEL-297386)
+
+* Wed Oct 07 2026 Jonathan Wakely <jwakely@redhat.com> - 11.5.0-16
+- fix CVE-2026-102010, PR libstdc++/127656 (RHEL-272119)
+- fix CVE-2026-95619, overflow in aligned operator new (RHEL-266646)
+
 * Thu Jul 09 2026 Siddhesh Poyarekar <siddhesh@redhat.com> - 11.5.0-15
 - Update libstdc++ pretty printers from GCC 16 GTS (RHEL-169098)
 
